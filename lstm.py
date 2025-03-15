@@ -20,14 +20,14 @@ torch.set_default_device(device)
 # def f(x, i):
 #     return np.sin((i + 1) * x)
 
-def f(x, i):
-    return np.sin((i + 1) * x) + np.cos((i + 1) * x)
+# def f(x, i):
+#     return np.sin((i + 1) * x) + np.cos((i + 1) * x)
 
 def noise(x):
-    return np.random.normal(0, 0.3, x.shape)
+    return np.random.normal(0, 1.0, x.shape)
 
-# def f(x, i):
-#     return (1 / (i + 1)) * np.sin((i + 1) * x)
+def f(x, i):
+    return (1 / (i + 1)) * np.sin((i + 1) * x)
 
 # def f(x, i):
 #     return np.sin(x)
@@ -93,7 +93,7 @@ old_model = SimpleLSTM(input_size, hidden_size, output_size, num_layers=num_laye
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.00005)
 
-early_stopper = EarlyStopping(patience=100, verbose=True, path='checkpoint.pt', delta=0.0)
+early_stopper = EarlyStopping(patience=100, verbose=True, path='checkpoint.pt', delta=0.001)
 
 
 print('Training the model...')
