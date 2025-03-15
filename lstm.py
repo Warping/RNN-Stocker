@@ -23,11 +23,14 @@ torch.set_default_device(device)
 def f(x, i):
     return np.sin((i + 1) * x) + np.cos((i + 1) * x)
 
+def noise(x):
+    return np.random.normal(0, 0.3, x.shape)
+
 # def f(x, i):
 #     return (1 / (i + 1)) * np.sin((i + 1) * x)
 
 # def f(x, i):
-#     return np.sin(i*x)
+#     return np.sin(x)
 
 def fromiter(x, i):
     return np.fromiter((f(xi, i) for xi in x), x.dtype)
@@ -42,8 +45,10 @@ def generate_data(seq_length, num_samples, num_features):
         inputs = []
         y = np.zeros(seq_length)
         for j in range(num_features):
-            inputs.append(np.linspace(0 + np.pi * i, (2 + i) * np.pi, seq_length))
+            inputs.append(np.linspace(2 * np.pi * i, 2 * np.pi * (i + 1), seq_length))
             y += fromiter(inputs[j], j)
+        # Add noise
+        y += noise(inputs[0])
         features = np.zeros((seq_length, num_features))
         for j in range(num_features):
             features[:, j] = inputs[j]
@@ -51,9 +56,9 @@ def generate_data(seq_length, num_samples, num_features):
         Y.append(y)
     return np.array(X), np.array(Y)
 
-seq_length = 100
-num_samples = 500
-num_features = 20  # Number of input features
+seq_length = 25
+num_samples = 120
+num_features = 10  # Number of input features
 X, Y = generate_data(seq_length, num_samples, num_features)
 
 X = torch.tensor(X, dtype=torch.float32)
@@ -81,14 +86,14 @@ print('Creating LSTM model...')
 input_size = num_features  # Update input_size to match the number of features
 hidden_size = 500
 output_size = 1
-num_layers = 2  # Define the number of layers
+num_layers = 7  # Define the number of layers
 
 model = SimpleLSTM(input_size, hidden_size, output_size, num_layers=num_layers)
 old_model = SimpleLSTM(input_size, hidden_size, output_size, num_layers=num_layers)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.00005)
 
-early_stopper = EarlyStopping(patience=500, verbose=True, path='checkpoint.pt', delta=0.0)
+early_stopper = EarlyStopping(patience=100, verbose=True, path='checkpoint.pt', delta=0.0)
 
 
 print('Training the model...')
@@ -104,6 +109,8 @@ i = num_samples
 for j in range(num_features):
     inputs.append(np.linspace(0 + np.pi * i, (2 + i) * np.pi, seq_length))
     y += fromiter(inputs[j], j)
+# Add noise
+y += noise(inputs[0])
 features = np.zeros((seq_length, num_features))
 for j in range(num_features):
     features[:, j] = inputs[j]
@@ -125,31 +132,12 @@ for epoch in range(num_epochs):
     
     # Validation loss
     with torch.no_grad():
-        # X_test = []
-        # Y_test = []
-        # inputs = []
-        # y = np.zeros(seq_length)
-        # i = num_samples
-        # for j in range(num_features):
-        #     inputs.append(np.linspace(0 + np.pi * i, (2 + i) * np.pi, seq_length))
-        #     y += fromiter(inputs[j], j)
-        # features = np.zeros((seq_length, num_features))
-        # for j in range(num_features):
-        #     features[:, j] = inputs[j]
-        # X_test.append(features)
-        # Y_test.append(y)
-        # Y_test = np.array(Y_test)
-        # X_test = np.array(X_test)
-        # X_test = torch.tensor(X_test, dtype=torch.float32)
-        # Y_test = torch.tensor(Y_test, dtype=torch.float32)
         outputs_validation = model(X_test)
         loss_v = criterion(outputs_validation, Y_test.unsqueeze(2))
         loss_validation = loss_v.item()
     # loss_validation = 0.0
         
     loss_training = loss.item()
-    # if (epoch + 1) % 2 == 0:
-    #     print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Validation Loss: {loss_validation:.4f}')
     early_stopper(loss_validation, model)
     if early_stopper.early_stop:
         print(f'Early stopping on epoch {epoch}')
@@ -198,4 +186,15 @@ plt.plot(Y_test[0], label='True')
 plt.plot(predictions[0], label='Predicted')
 plt.plot(predictions_old[0], label='Predicted (Old)')
 plt.legend()
+
+# Create plot of all training data
+with torch.no_grad():
+    predictions = model(X)
+    predictions = predictions.cpu().numpy()
+    
+Y = Y.cpu()
+    
+plt.figure(figsize=(10, 6))
+for i in range(num_samples):
+    plt.plot(Y[i])
 plt.show()
