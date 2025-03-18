@@ -15,19 +15,23 @@ else:
     print('CUDA is not available. Using CPU.')
     
 torch.set_default_device(device)
+# device = torch.device('cpu')
+# torch.set_default_device(device)
 
 
 # def f(x, i):
 #     return np.sin((i + 1) * x)
 
 # def f(x, i):
-#     return np.sin((i + 1) * x) + np.cos((i + 1) * x)
+#     # return (0.01 * x + np.sin(0.1 * x))
+#     return np.sin(x) + np.cos(i * x)
+#     # return 0.001 * x
 
 def noise(x):
-    return np.random.normal(0, 1.0, x.shape)
+    return np.random.normal(0, 0.0, x.shape)
 
 def f(x, i):
-    return (1 / (i + 1)) * np.sin((i + 1) * x)
+    return (1 / (i + 1)) * np.sin(0.001*x)
 
 # def f(x, i):
 #     return np.sin(x)
@@ -57,8 +61,8 @@ def generate_data(seq_length, num_samples, num_features):
     return np.array(X), np.array(Y)
 
 seq_length = 25
-num_samples = 120
-num_features = 10  # Number of input features
+num_samples = 200
+num_features = 1  # Number of input features
 X, Y = generate_data(seq_length, num_samples, num_features)
 
 X = torch.tensor(X, dtype=torch.float32)
@@ -86,14 +90,14 @@ print('Creating LSTM model...')
 input_size = num_features  # Update input_size to match the number of features
 hidden_size = 500
 output_size = 1
-num_layers = 7  # Define the number of layers
+num_layers = 2  # Define the number of layers
 
 model = SimpleLSTM(input_size, hidden_size, output_size, num_layers=num_layers)
 old_model = SimpleLSTM(input_size, hidden_size, output_size, num_layers=num_layers)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.00005)
 
-early_stopper = EarlyStopping(patience=100, verbose=True, path='checkpoint.pt', delta=0.001)
+early_stopper = EarlyStopping(patience=100, verbose=True, path='checkpoint.pt', delta=0.01)
 
 
 print('Training the model...')
@@ -107,10 +111,10 @@ inputs = []
 y = np.zeros(seq_length)
 i = num_samples
 for j in range(num_features):
-    inputs.append(np.linspace(0 + np.pi * i, (2 + i) * np.pi, seq_length))
+    inputs.append(np.linspace(2 * np.pi * i, 2 * np.pi * (i + 1), seq_length))
     y += fromiter(inputs[j], j)
 # Add noise
-y += noise(inputs[0])
+# y += noise(inputs[0])
 features = np.zeros((seq_length, num_features))
 for j in range(num_features):
     features[:, j] = inputs[j]
@@ -167,7 +171,7 @@ with torch.no_grad():
     y = np.zeros(seq_length)
     i = num_samples
     for j in range(num_features):
-        inputs.append(np.linspace(0 + np.pi * i, (2 + i) * np.pi, seq_length))
+        inputs.append(np.linspace(2 * np.pi * i, 2 * np.pi * (i + 1), seq_length))
         y += fromiter(inputs[j], j)
     features = np.zeros((seq_length, num_features))
     for j in range(num_features):
@@ -190,11 +194,19 @@ plt.legend()
 # Create plot of all training data
 with torch.no_grad():
     predictions = model(X)
-    predictions = predictions.cpu().numpy()
     
 Y = Y.cpu()
-    
+predictions = predictions.cpu()
+# Concatenate all the predictions and true values into a single array
+concat_y = np.array([])
+for i in range(len(Y)):
+    concat_y = np.concatenate((concat_y, Y[i].numpy()), axis=0)
+concat_predictions = np.array([])
+for i in range(len(predictions)):
+    concat_predictions = np.concatenate((concat_predictions, predictions[i].numpy().flatten()), axis=0)  # Flatten the predictions
+
 plt.figure(figsize=(10, 6))
-for i in range(num_samples):
-    plt.plot(Y[i])
+plt.plot(concat_y, label='True')
+plt.plot(concat_predictions, label='Predicted')
+plt.legend()
 plt.show()
