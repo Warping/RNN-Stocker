@@ -33,8 +33,8 @@ class CLIInterface:
     def graph(self, stock):
         self.portfolio.graph_stock(stock)
         
-    def tech_analysis(self, stock):
-        self.portfolio.tech_analysis(stock)
+    def tech_analysis(self, stock, interval=1):
+        self.portfolio.tech_analysis(stock, int(interval))
 
     def main(self):
         while True:
@@ -58,6 +58,8 @@ class CLIInterface:
                 self.graph(command[1])
             elif action == 'tech' and len(command) == 2:
                 self.tech_analysis(command[1])
+            elif action == 'tech' and len(command) == 3:
+                self.tech_analysis(command[1], command[2])
             elif action == 'exit':
                 self.data_saver.save(self.portfolio)
                 break

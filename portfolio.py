@@ -75,37 +75,23 @@ class Portfolio:
         else:
             print(f"Could not graph {stock_name}")
             
-    def tech_analysis(self, stock_name, days_back=0):
-        stock_data = yf.Ticker(stock_name).history(period='1y', interval='1d')
+    def tech_analysis(self, stock_name, interval=1):
+        stock_data = yf.Ticker(stock_name).history(period='10y', interval='1d')
         # days = 10
         # days_back = 5
         if stock_data is not None:
             tech_indicators = sti.StockTechnicalIndicators(stock_data)
-            
-            # sma = tech_indicators.simple_moving_average(days, days_back)
-            # wma = tech_indicators.weighted_moving_average(days, days_back)
-            # momentum = tech_indicators.momentum(days, days_back)
-            # stoch_k = tech_indicators.stochastic_kpercent(1, days, days_back)
-            # stoch_d = tech_indicators.stochastic_dpercent(days, days_back)
-            # rsi = tech_indicators.relative_strength_index(days, days_back)
-            # macd = tech_indicators.moving_average_convergence_divergence(12, 26, days_back)
-            # signal = tech_indicators.signal_line(12, 26, days, days_back)
-            # cci = tech_indicators.commodity_channel_index(days, days_back)
-            # larry_williams_r = tech_indicators.larry_williams_r(days, days_back)
-            # accu_dist = tech_indicators.accumulation_distribution_osciallator(days_back)
-            # print(f"Stock: {stock_name}")
-            # print(f"Simple Moving Average: {sma:.2f}")
-            # print(f"Weighted Moving Average: {wma:.2f}")
-            # print(f"Momentum: {momentum:.2f}")
-            # print(f"Stochastic K Percent: {stoch_k:.2f}")
-            # print(f"Stochastic D Percent: {stoch_d:.2f}")
-            # print(f"Relative Strength Index: {rsi:.2f}")
-            # print(f"MACD: {macd:.2f}")
-            # print(f"Signal Line: {signal:.2f}")
-            # print(f"Commodity Channel Index: {cci:.2f}")
-            # print(f"Larry Williams R: {larry_williams_r:.2f}")
-            # print(f"Accumulation Distribution Oscillator: {accu_dist:.2f}")
-            # self.graph_stock(stock_name)
+            data_frame, binary_data_frame = tech_indicators.get_dataframes(interval=interval)
+            # Graph the data
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(18, 8))
+            for column in data_frame.columns:
+                ax1.plot(data_frame[column], label=column)
+            for column in binary_data_frame.columns:
+                ax2.plot(binary_data_frame[column], label=column)
+            ax1.legend()
+            ax2.legend()
+            plt.title(f'{stock_name} Technical Indicators')
+            plt.show()
         else:
             print(f"Could not analyze {stock_name}")
 
