@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from early_stopping_pytorch import EarlyStopping
 from stock_technical_indicators import StockTechnicalIndicators
 import yfinance as yf
-from datetime import timedelta
 import time
 import keyboard
 import pandas as pd
