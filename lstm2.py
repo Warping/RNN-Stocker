@@ -12,18 +12,19 @@ import shutil
 
 # Constants
 seq_length = 30 # Number of time steps to look back
-num_epochs = 10000 # Number of epochs
-hidden_dim = 500 # Number of hidden neurons
-layer_dim = 2 # Number of hidden layers
+num_epochs = 20000 # Number of epochs
+hidden_dim = 700 # Number of hidden neurons
+layer_dim = 3 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
-training_size = 0.7  # Percentage of data to use for training
+training_size = 0.90  # Percentage of data to use for training
 
 # Early stopping
-patience = 100
+patience = 50
 delta = 0.0
 
 # Stock data
 stock = 'VFIAX'
+period = 'max'
 # Check data folder for csv file of stock data
 try:
     cont_data_frame = pd.read_csv(f'data/{stock}_data_cont.csv')
@@ -34,7 +35,7 @@ except FileNotFoundError:
         stock_data = pd.read_csv(f'data/{stock}_data.csv')
         print(f'Loaded {stock} data from file')
     except FileNotFoundError:
-        stock_data = yf.Ticker(stock).history(period='10y', interval='1d')
+        stock_data = yf.Ticker(stock).history(period=period, interval='1d')
         stock_data.to_csv(f'data/{stock}_data.csv')
         print(f'Loaded {stock} data from Yahoo Finance') 
     sti = StockTechnicalIndicators(stock_data)
@@ -76,7 +77,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
     print('CUDA is not available. Using CPU.')
-
+    
 # def fromiter(x, i):
 #     print(f'x: {x}, i: {i}')
 #     return np.fromiter((data_grabber(xi, i) for xi in x), x.dtype)
@@ -109,6 +110,7 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
         axs[row, col].set_ylabel(data_value_label)
         axs[row, col].legend()
     plt.title(title)
+    plt.savefig("./output/" + title + ".png")
 
 # Generate synthetic data
 # t is a list of indices from 0 to len(data_frame)
@@ -184,42 +186,43 @@ for epoch in range(num_epochs):
         val_loss = criterion(predicted, valY)
         val_loss_float = val_loss.item()
 
-    early_stopper(val_loss_float, model)
+    print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
     if (epoch+1) % 10 == 0:
+        early_stopper(val_loss_float, model)
         current_time = time.time()
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}, Time: {current_time - last_time:.2f} seconds')
+        print(f'Time: {current_time - last_time:.2f} seconds')
         start_time = last_time
-    if early_stopper.early_stop:
-        print('Early stopping')
-        break
+        if early_stopper.early_stop:
+            print('Early stopping')
+            break
     
     # Allow user to pause training and resume later (handle KeyboardInterrupt)
-    if keyboard.is_pressed('p'):
-        print('Training paused...')
-        # Save model
-        torch.save(model.state_dict(), f'checkpoints/last_checkpoint.pt')
-        print('Model saved')
-        # Show current model performance
-        model.eval()
-        predicted, _, _ = model(trainX, h0, c0)
-        original = data[seq_length:]
-        time_steps = np.arange(seq_length, len(data))
-        predicted = predicted.cpu()
-        plot_predictions(original, predicted, time_steps, data_frame, 'LSTM Model Predictions vs. Original Data (Training)')
-        # Show current validation performance
-        predicted_val, _, _ = model(valX, h0_val, c0_val)
-        original_val = data_val[seq_length:]
-        time_steps_val = np.arange(seq_length, len(data_val))
-        predicted_val = predicted_val.cpu()
-        plot_predictions(original_val, predicted_val, time_steps_val, data_frame, 'LSTM Model Predictions vs. Original Data (Validation)')
-        plt.show()
-        # Resume training
-        input('Press enter to continue training...')
-        print('Training resumed...')
-        continue
-    if keyboard.is_pressed('q'):
-        print('Training stopped')
-        break
+    # if keyboard.is_pressed('p'):
+    #     print('Training paused...')
+    #     # Save model
+    #     torch.save(model.state_dict(), f'checkpoints/last_checkpoint.pt')
+    #     print('Model saved')
+    #     # Show current model performance
+    #     model.eval()
+    #     predicted, _, _ = model(trainX, h0, c0)
+    #     original = data[seq_length:]
+    #     time_steps = np.arange(seq_length, len(data))
+    #     predicted = predicted.cpu()
+    #     plot_predictions(original, predicted, time_steps, data_frame, 'LSTM Model Predictions vs. Original Data (Training)')
+    #     # Show current validation performance
+    #     predicted_val, _, _ = model(valX, h0_val, c0_val)
+    #     original_val = data_val[seq_length:]
+    #     time_steps_val = np.arange(seq_length, len(data_val))
+    #     predicted_val = predicted_val.cpu()
+    #     plot_predictions(original_val, predicted_val, time_steps_val, data_frame, 'LSTM Model Predictions vs. Original Data (Validation)')
+    #     plt.show()
+    #     # Resume training
+    #     input('Press enter to continue training...')
+    #     print('Training resumed...')
+    #     continue
+    # if keyboard.is_pressed('q'):
+    #     print('Training stopped')
+    #     break
     
 current_time = time.time()  
 total_time = current_time - start_time
