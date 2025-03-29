@@ -31,7 +31,7 @@ class StockTechnicalIndicators:
         
         # The dataframe should be returned
         data = {
-            'VAL': [],
+            # 'VAL': [],
             'SMA': [],
             'WMA': [],
             'MOM': [],
@@ -43,7 +43,7 @@ class StockTechnicalIndicators:
             # 'ADO': [],
             'CCI': []
         }
-        data['VAL'] = [self.current_price(i) for i in range(0, len(self.stock_data) - days, interval)][::-1]
+        data_val = [self.current_price(i) for i in range(0, len(self.stock_data) - days, interval)][::-1]
         data['SMA'] = [self.simple_moving_average(days, i) for i in range(0, len(self.stock_data) - days, interval)][::-1]
         data['WMA'] = [self.weighted_moving_average(days, i) for i in range(0, len(self.stock_data) - days, interval)][::-1]
         data['MOM'] = [self.momentum(days, i) for i in range(0, len(self.stock_data) - days, interval)][::-1]
@@ -72,8 +72,8 @@ class StockTechnicalIndicators:
             'CCI': []
         }
         
-        binary_data['SMA'] = [1 if data_frame['VAL'].iloc[i] > data_frame['SMA'].iloc[i] else -1 for i in range(1, len(data_frame))]
-        binary_data['WMA'] = [1 if data_frame['VAL'].iloc[i] > data_frame['WMA'].iloc[i] else -1 for i in range(1, len(data_frame))]
+        binary_data['SMA'] = [1 if data_val[i] > data_frame['SMA'].iloc[i] else -1 for i in range(1, len(data_frame))]
+        binary_data['WMA'] = [1 if data_val[i] > data_frame['WMA'].iloc[i] else -1 for i in range(1, len(data_frame))]
         binary_data['MOM'] = [1 if data_frame['MOM'].iloc[i] > 0 else -1 for i in range(1, len(data_frame))]
         binary_data['STCK'] = [1 if data_frame['STCK'].iloc[i] - data_frame['STCK'].iloc[i-1] > 0 else -1 for i in range(1, len(data_frame))]
         binary_data['STCD'] = [1 if data_frame['STCD'].iloc[i] - data_frame['STCD'].iloc[i-1] > 0 else -1 for i in range(1, len(data_frame))]

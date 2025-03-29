@@ -12,19 +12,19 @@ import shutil
 
 # Constants
 seq_length = 30 # Number of time steps to look back
-num_epochs = 20000 # Number of epochs
-hidden_dim = 700 # Number of hidden neurons
-layer_dim = 3 # Number of hidden layers
+num_epochs = 10000 # Number of epochs
+hidden_dim = 500 # Number of hidden neurons
+layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
-training_size = 0.90  # Percentage of data to use for training
+training_size = 0.70  # Percentage of data to use for training
 
 # Early stopping
-patience = 50
+patience = 1000
 delta = 0.0
 
 # Stock data
-stock = 'VFIAX'
-period = 'max'
+stock = '^GSPC'
+period = '1y'
 # Check data folder for csv file of stock data
 try:
     cont_data_frame = pd.read_csv(f'data/{stock}_data_cont.csv')
@@ -229,12 +229,8 @@ total_time = current_time - start_time
 print(f'Training stopped. Total time: {total_time:.2f} seconds')
 # Copy best_current_checkpoint.pt to {stock}_final.pt
 # Check if best_current_checkpoint.pt exists
-if early_stopper.early_stop:
-    print('Copying best_current_checkpoint.pt to {stock}_final.pt')
-    shutil.copy('checkpoints/best_current_checkpoint.pt', f'checkpoints/{stock}_final.pt')
-else:
-    print('Copying last_checkpoint.pt to {stock}_final.pt')
-    shutil.copy('checkpoints/last_checkpoint.pt', f'checkpoints/{stock}_final.pt')
+print('Copying best_current_checkpoint.pt to {stock}_final.pt')
+shutil.copy('checkpoints/best_current_checkpoint.pt', f'checkpoints/{stock}_final.pt')
 
 model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=features)
 model.load_state_dict(torch.load(f'checkpoints/{stock}_final.pt'))
