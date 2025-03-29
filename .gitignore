@@ -1,6 +1,5 @@
 # Ignore all .pt files
 *.pt
-*.csv
 *.pyc
-*.png
 .venv/
+*.whl
