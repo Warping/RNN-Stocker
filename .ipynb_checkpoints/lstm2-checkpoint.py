@@ -13,19 +13,19 @@ import io
 
 # Constants
 seq_length = 30 # Number of time steps to look back
-num_epochs = 100000 # Number of epochs
-hidden_dim = 1000 # Number of hidden neurons
-layer_dim = 4 # Number of hidden layers
+num_epochs = 10000 # Number of epochs
+hidden_dim = 500 # Number of hidden neurons
+layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
 
 # Early stopping
-patience = 5000
+patience = 100
 delta = 0.0
 
 # Stock data
 stock = '^GSPC'
-period = '10y'
+period = '5y'
 # Check data folder for csv file of stock data
 try:
     cont_data_frame = pd.read_csv(f'data/{stock}_{period}_data_cont.csv')
@@ -44,20 +44,20 @@ except FileNotFoundError:
     cont_data_frame.to_csv(f'data/{stock}_{period}_data_cont.csv', index=False)
     binary_data_frame.to_csv(f'data/{stock}_{period}_data_binary.csv', index=False)
     print(f'Saved Processed {stock}_{period}_ data to file')
-data_frame = cont_data_frame
-
-features = len(data_frame.columns)
-    
+features = len(cont_data_frame.columns) 
 for i in range(features):
     # Normalize data to be between 0 and 1
-    print(f'Min: {data_frame.iloc[:, i].min()}, Max: {data_frame.iloc[:, i].max()}')
+    print(f'Min: {cont_data_frame.iloc[:, i].min()}, Max: {cont_data_frame.iloc[:, i].max()}')
     # if data_frame.iloc[:, i].max() == data_frame.iloc[:, i].min():
     #     data_frame.iloc[:, i] = 0.0
     #     continue
-    data_frame.iloc[:, i] = (data_frame.iloc[:, i] - data_frame.iloc[:, i].min()) / (data_frame.iloc[:, i].max() - data_frame.iloc[:, i].min())
+    cont_data_frame.iloc[:, i] = (cont_data_frame.iloc[:, i] - cont_data_frame.iloc[:, i].min()) / (cont_data_frame.iloc[:, i].max() - cont_data_frame.iloc[:, i].min())
+
+data_frame = binary_data_frame
+# data_frame = cont_data_frame
     
-data_frame.to_csv(f'data/{stock}_data_cont_normalized.csv', index=False)
-print(f'Saved Normalized {stock} data to file')
+data_frame.to_csv(f'data/{stock}_{period}_data_frame_normalized.csv', index=False)
+print(f'Saved Normalized {stock}_{period}_ data to file')
 
 # Plot data_frame['VAL'] for len(data_frame) days
 # plt.figure(figsize=(12, 6))
@@ -99,7 +99,7 @@ def create_sequences(data, seq_length):
     return np.array(xs), np.array(ys)
 
 def plot_predictions(original, predicted, time_steps, data_frame, title):
-    __, axs = plt.subplots(4, features//3, figsize=(18, 8))
+    __, axs = plt.subplots(4, features//3, figsize=(15, 10))
     for i in range(features):
         data_value_label = data_frame.columns[i]
         row = i // 3
@@ -248,7 +248,7 @@ for epoch in range(num_epochs):
         val_loss = criterion(predicted, valY)
         val_loss_float = val_loss.item()
 
-    print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
+    # print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
     early_stopper(val_loss_float, model)
     if (epoch+1) % 10 == 0:
         current_time = time.time()
