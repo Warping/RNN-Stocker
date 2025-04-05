@@ -25,7 +25,7 @@ delta = 0.0
 
 # Stock data
 stock = '^GSPC'
-period = '5y'
+period = '10y'
 # Check data folder for csv file of stock data
 try:
     cont_data_frame = pd.read_csv(f'data/{stock}_{period}_data_cont.csv')
@@ -53,8 +53,8 @@ for i in range(features):
     #     continue
     cont_data_frame.iloc[:, i] = (cont_data_frame.iloc[:, i] - cont_data_frame.iloc[:, i].min()) / (cont_data_frame.iloc[:, i].max() - cont_data_frame.iloc[:, i].min())
 
-data_frame = binary_data_frame
-# data_frame = cont_data_frame
+# data_frame = binary_data_frame
+data_frame = cont_data_frame
     
 data_frame.to_csv(f'data/{stock}_{period}_data_frame_normalized.csv', index=False)
 print(f'Saved Normalized {stock}_{period}_ data to file')
