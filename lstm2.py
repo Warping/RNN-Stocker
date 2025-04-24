@@ -44,7 +44,11 @@ except FileNotFoundError:
     cont_data_frame.to_csv(f'data/{stock}_{period}_data_cont.csv', index=False)
     binary_data_frame.to_csv(f'data/{stock}_{period}_data_binary.csv', index=False)
     print(f'Saved Processed {stock}_{period}_ data to file')
-features = len(cont_data_frame.columns) 
+    
+# Drop unnecessary columns
+cont_data_frame = cont_data_frame.drop(columns=['SMA', 'WMA'])
+features = len(cont_data_frame.columns)
+ 
 for i in range(features):
     # Normalize data to be between 0 and 1
     print(f'Min: {cont_data_frame.iloc[:, i].min()}, Max: {cont_data_frame.iloc[:, i].max()}')
@@ -52,6 +56,8 @@ for i in range(features):
     #     data_frame.iloc[:, i] = 0.0
     #     continue
     cont_data_frame.iloc[:, i] = (cont_data_frame.iloc[:, i] - cont_data_frame.iloc[:, i].min()) / (cont_data_frame.iloc[:, i].max() - cont_data_frame.iloc[:, i].min())
+
+
 
 # data_frame = binary_data_frame
 data_frame = cont_data_frame
