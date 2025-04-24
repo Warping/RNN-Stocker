@@ -294,40 +294,39 @@ current_time = time.time()
 
 
 # Training loop
-def train_loop():
-    for epoch in range(num_epochs):
-        model.train()
-        optimizer.zero_grad()
+for epoch in range(num_epochs):
+    model.train()
+    optimizer.zero_grad()
 
-        outputs, h0, c0 = model(trainX, h0, c0)
+    outputs, h0, c0 = model(trainX, h0, c0)
 
-        loss = criterion(outputs, trainY)
-        loss.backward()
-        optimizer.step()
+    loss = criterion(outputs, trainY)
+    loss.backward()
+    optimizer.step()
 
-        h0 = h0.detach()
-        c0 = c0.detach()
-        
-        # Get validation loss
-        with torch.no_grad():
-            model.eval()
-            h0_val, c0_val = None, None  # Reset hidden and cell states for validation
-            predicted, _, _ = model(valX, h0_val, c0_val)
-            val_loss = criterion(predicted, valY)
-            val_loss_float = val_loss.item()
+    h0 = h0.detach()
+    c0 = c0.detach()
+    
+    # Get validation loss
+    with torch.no_grad():
+        model.eval()
+        h0_val, c0_val = None, None  # Reset hidden and cell states for validation
+        predicted, _, _ = model(valX, h0_val, c0_val)
+        val_loss = criterion(predicted, valY)
+        val_loss_float = val_loss.item()
 
-        # print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
-        early_stopper(val_loss_float, model, epoch)
-        if (epoch+1) % 10 == 0:
-            current_time = time.time()
-            print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
-            print(f'Time: {current_time - last_time:.2f} seconds')
-            start_time = last_time
-        if early_stopper.early_stop:
-            print('Early stopping')
-            break
-# End Training
-train_loop()
+    # print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
+    early_stopper(val_loss_float, model, epoch)
+    if (epoch+1) % 10 == 0:
+        current_time = time.time()
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
+        print(f'Time: {current_time - last_time:.2f} seconds')
+        start_time = last_time
+    if early_stopper.early_stop:
+        print('Early stopping')
+        break
+
+
 current_time = time.time()  
 total_time = current_time - start_time
 print(f'Training stopped. Total time: {total_time:.2f} seconds')
