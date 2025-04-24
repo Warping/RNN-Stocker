@@ -19,6 +19,14 @@ layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
 
+# Early stopping
+patience = 100
+delta = 0.0
+
+# Stock data
+stock = '^GSPC'
+period = '10y'
+
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='LSTM Stock Price Prediction')
 parser.add_argument('--seq_length', type=int, default=seq_length, help=f'Number of time steps to look back -- Default= {seq_length}')
@@ -28,6 +36,11 @@ parser.add_argument('--hidden_dim', type=int, default=hidden_dim, help=f'Number 
 parser.add_argument('--layer_dim', type=int, default=layer_dim, help=f'Number of hidden layers -- Default= {layer_dim}')
 parser.add_argument('--learning_rate', type=float, default=learning_rate, help=f'Learning rate -- Default= {learning_rate}')
 parser.add_argument('--training_size', type=float, default=training_size, help=f'Percentage of data to use for training -- Default= {training_size}')
+parser.add_argument('--stock', type=str, default=stock, help=f'Stock ticker -- Default= {stock}')
+parser.add_argument('--period', type=str, default=period, help=f'Period to fetch data for -- Default= {period}')
+parser.add_argument('--patience', type=int, default=patience, help=f'Early stopping patience -- Default= {patience}')
+parser.add_argument('--delta', type=float, default=delta, help=f'Early stopping delta -- Default= {delta}')
+
 args = parser.parse_args()
 # Update constants with command line arguments
 seq_length = args.seq_length
@@ -37,6 +50,11 @@ hidden_dim = args.hidden_dim
 layer_dim = args.layer_dim
 learning_rate = args.learning_rate
 training_size = args.training_size
+patience = args.patience
+delta = args.delta
+stock = args.stock
+period = args.period
+
 # Print the arguments
 print(f'Sequence Length: {seq_length}')
 print(f'Average Period: {avg_period}')
@@ -45,14 +63,11 @@ print(f'Hidden Dimension: {hidden_dim}')
 print(f'Layer Dimension: {layer_dim}')
 print(f'Learning Rate: {learning_rate}')
 print(f'Training Size: {training_size}')
+print(f'Patience: {patience}')
+print(f'Delta: {delta}')
+print(f'Stock: {stock}')
+print(f'Period: {period}')
 
-# Early stopping
-patience = 100
-delta = 0.0
-
-# Stock data
-stock = '^GSPC'
-period = '10y'
 # Check data folder for csv file of stock data
 try:
     cont_data_frame = pd.read_csv(f'data/{stock}_{period}_data_cont.csv')
