@@ -6,22 +6,48 @@ import matplotlib.pyplot as plt
 from stock_technical_indicators import StockTechnicalIndicators
 import yfinance as yf
 import time
-import keyboard
 import pandas as pd
-import shutil
 import io
+import argparse
 
 # Constants
 seq_length = 30 # Number of time steps to look back
-avg_period = 200 # Number of days to average over
+avg_period = 30 # Number of days to average over
 num_epochs = 10000 # Number of epochs
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
 
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='LSTM Stock Price Prediction')
+parser.add_argument('--seq_length', type=int, default=seq_length, help=f'Number of time steps to look back -- Default= {seq_length}')
+parser.add_argument('--avg_period', type=int, default=avg_period, help=f'Number of days to normalize and average over -- Default= {avg_period}')
+parser.add_argument('--num_epochs', type=int, default=num_epochs, help=f'Number of epochs -- Default= {num_epochs}')
+parser.add_argument('--hidden_dim', type=int, default=hidden_dim, help=f'Number of hidden neurons -- Default= {hidden_dim}')
+parser.add_argument('--layer_dim', type=int, default=layer_dim, help=f'Number of hidden layers -- Default= {layer_dim}')
+parser.add_argument('--learning_rate', type=float, default=learning_rate, help=f'Learning rate -- Default= {learning_rate}')
+parser.add_argument('--training_size', type=float, default=training_size, help=f'Percentage of data to use for training -- Default= {training_size}')
+args = parser.parse_args()
+# Update constants with command line arguments
+seq_length = args.seq_length
+avg_period = args.avg_period
+num_epochs = args.num_epochs
+hidden_dim = args.hidden_dim
+layer_dim = args.layer_dim
+learning_rate = args.learning_rate
+training_size = args.training_size
+# Print the arguments
+print(f'Sequence Length: {seq_length}')
+print(f'Average Period: {avg_period}')
+print(f'Number of Epochs: {num_epochs}')
+print(f'Hidden Dimension: {hidden_dim}')
+print(f'Layer Dimension: {layer_dim}')
+print(f'Learning Rate: {learning_rate}')
+print(f'Training Size: {training_size}')
+
 # Early stopping
-patience = 200
+patience = 100
 delta = 0.0
 
 # Stock data
