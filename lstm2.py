@@ -51,6 +51,7 @@ features = len(cont_data_frame.columns)
  
 for i in range(features):
     # Normalize data to be between 0 and 1
+    print(f'Normalizing {cont_data_frame.columns[i]}')
     print(f'Min: {cont_data_frame.iloc[:, i].min()}, Max: {cont_data_frame.iloc[:, i].max()}')
     # if data_frame.iloc[:, i].max() == data_frame.iloc[:, i].min():
     #     data_frame.iloc[:, i] = 0.0
