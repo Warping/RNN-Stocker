@@ -110,7 +110,7 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
     for i in range(features):
         data_value_label = data_frame.columns[i]
         row = i // 3
-        col = i % 3
+        col = i % (features//3)
         axs[row, col].plot(time_steps, original[:, i], label=f'Original Data {data_value_label}')
         axs[row, col].plot(time_steps, predicted.detach().numpy()[:, i], label=f'Predicted Data {data_value_label}', linestyle='--')
         axs[row, col].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
