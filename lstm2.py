@@ -211,11 +211,11 @@ class EarlyStopping:
 
         if self.best_val_loss is None:
             self.best_val_loss = val_loss
-            self.save_checkpoint(val_loss, model)
+            self.save_checkpoint(val_loss, model, epoch)
         elif val_loss < self.best_val_loss - self.delta:
             # Significant improvement detected
             self.best_val_loss = val_loss
-            self.save_checkpoint(val_loss, model)
+            self.save_checkpoint(val_loss, model, epoch)
             self.counter = 0  # Reset counter since improvement occurred
         else:
             # No significant improvement
