@@ -13,7 +13,7 @@ import io
 
 # Constants
 seq_length = 30 # Number of time steps to look back
-avg_period = 30 # Number of days to average over
+avg_period = 200 # Number of days to average over
 num_epochs = 10000 # Number of epochs
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
