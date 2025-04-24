@@ -274,7 +274,9 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
     def get_model(self):
-        model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=features)
+        # Use the correct output_dim for multi-step predictions
+        output_dim = features * prediction_steps  # Ensure this matches the model used during training
+        model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=output_dim)
         model.load_state_dict(torch.load(self.model_buffer))
         return model
     
@@ -283,7 +285,7 @@ model = LSTMModel(
     input_dim=features,
     hidden_dim=hidden_dim,
     layer_dim=layer_dim,
-    output_dim=features * prediction_steps  # Output for 10 steps ahead
+    output_dim=features * prediction_steps
 )
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
