@@ -149,26 +149,23 @@ torch.set_default_device(device)
 np.random.seed(0)
 torch.manual_seed(0)
 
-def create_sequences(data, seq_length):
+def create_sequences(data, seq_length, prediction_steps=10):
     xs = []
     ys = []
-    for i in range(len(data)-seq_length):
-        x = data[i:(i+seq_length)]
-        y = data[i+seq_length]
+    for i in range(len(data) - seq_length - prediction_steps + 1):
+        x = data[i:(i + seq_length)]
+        y = data[(i + seq_length):(i + seq_length + prediction_steps)]
         xs.append(x)
         ys.append(y)
     return np.array(xs), np.array(ys)
 
 def plot_predictions(original, predicted, time_steps, data_frame, title):
-    __, axs = plt.subplots(features, 1, figsize=(15, 10*features))
+    __, axs = plt.subplots(features, 1, figsize=(15, 10 * features))
     for i in range(features):
         data_value_label = data_frame.columns[i]
-        # row = i // 3
-        # col = i % 3
         row = i
-        col = 0
-        axs[row].plot(time_steps, original[:, i], label=f'Original Data {data_value_label}')
-        axs[row].plot(time_steps, predicted.detach().numpy()[:, i], label=f'Predicted Data {data_value_label}', linestyle='--')
+        axs[row].plot(time_steps, original[:, :, i].flatten(), label=f'Original Data {data_value_label}')
+        axs[row].plot(time_steps, predicted.detach().numpy()[:, :, i].flatten(), label=f'Predicted Data {data_value_label}', linestyle='--')
         axs[row].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
         axs[row].set_xlabel('Time Step')
         axs[row].set_ylabel(data_value_label)
@@ -185,9 +182,10 @@ t_train = t_full[:train_upper_bound]
 data_full = data_frame.to_numpy()
 # Slice data into training and validation data
 data = data_full[:train_upper_bound]
-X, y = create_sequences(data, seq_length)
-# X, y = create_sequences(data, seq_length)
 
+prediction_steps = 10  # Number of steps to predict ahead
+
+X, y = create_sequences(data, seq_length, prediction_steps)
 trainX = torch.tensor(X, dtype=torch.float32)
 trainY = torch.tensor(y, dtype=torch.float32)
 
@@ -196,8 +194,8 @@ trainY = torch.tensor(y, dtype=torch.float32)
 t_val = t_full[train_upper_bound:]
 # data_val = np.array([fromiter(t_val, i) for i in range(features)]).T  # Generate 10 input features
 data_val = data_full[train_upper_bound:]
-X_val, y_val = create_sequences(data_val, seq_length)
 
+X_val, y_val = create_sequences(data_val, seq_length, prediction_steps)
 valX = torch.tensor(X_val, dtype=torch.float32)
 valY = torch.tensor(y_val, dtype=torch.float32)
 
@@ -215,7 +213,8 @@ class LSTMModel(nn.Module):
             c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).to(x.device)
         
         out, (hn, cn) = self.lstm(x, (h0, c0))
-        out = self.fc(out[:, -1, :])
+        out = self.fc(out[:, -1, :])  # Output for the last time step
+        out = out.view(out.size(0), -1, features)  # Reshape to (batch_size, prediction_steps, features)
         return out, hn, cn
 
 class EarlyStopping:
@@ -280,7 +279,12 @@ class EarlyStopping:
         return model
     
     
-model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=features)  # Update input_dim and output_dim
+model = LSTMModel(
+    input_dim=features,
+    hidden_dim=hidden_dim,
+    layer_dim=layer_dim,
+    output_dim=features * prediction_steps  # Output for 10 steps ahead
+)
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -300,7 +304,8 @@ for epoch in range(num_epochs):
 
     outputs, h0, c0 = model(trainX, h0, c0)
 
-    loss = criterion(outputs, trainY)
+    # Calculate loss for multi-step predictions
+    loss = criterion(outputs, trainY)  # trainY now contains 10 steps
     loss.backward()
     optimizer.step()
 
@@ -312,10 +317,10 @@ for epoch in range(num_epochs):
         model.eval()
         h0_val, c0_val = None, None  # Reset hidden and cell states for validation
         predicted, _, _ = model(valX, h0_val, c0_val)
-        val_loss = criterion(predicted, valY)
+        val_loss = criterion(predicted, valY)  # valY also contains 10 steps
         val_loss_float = val_loss.item()
 
-    # print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
+# print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
     early_stopper(val_loss_float, model, epoch)
     if (epoch+1) % 10 == 0:
         current_time = time.time()
