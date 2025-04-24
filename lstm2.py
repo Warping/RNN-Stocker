@@ -21,7 +21,7 @@ learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
 
 # Early stopping
-patience = 100
+patience = 200
 delta = 0.0
 
 # Stock data
@@ -47,23 +47,25 @@ except FileNotFoundError:
     print(f'Saved Processed {stock}_{period}_ data to file')
     
 # Drop unnecessary columns
-cont_data_frame = cont_data_frame.drop(columns=['SMA', 'WMA'])
+# cont_data_frame = cont_data_frame.drop(columns=['SMA', 'WMA'])
 features = len(cont_data_frame.columns)
 
 # Normalize every avg_period day period to avg_period day average
+print(f'Normalizing every {avg_period} day period to {avg_period} day average')
 for i in range(0, len(cont_data_frame), avg_period):
     if i + avg_period > len(cont_data_frame):
         # Remove last period if it is not complete
+        print(f'Removing last period {i} to {len(cont_data_frame)}')
         cont_data_frame = cont_data_frame.iloc[:i]
         break
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] - cont_data_frame.iloc[i:i+avg_period, :].mean()
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
     # cont_data_frame.iloc[i:i+30, :] = cont_data_frame.iloc[i:i+30, :] / cont_data_frame.iloc[i:i+30, :].std()
- 
+
+print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
     # Normalize data to be between 0 and 1
-    print(f'Normalizing {cont_data_frame.columns[i]}')
-    print(f'Min: {cont_data_frame.iloc[:, i].min()}, Max: {cont_data_frame.iloc[:, i].max()}')
+    print(f'Normalizing {cont_data_frame.columns[i]} -- Min: {cont_data_frame.iloc[:, i].min()}, Max: {cont_data_frame.iloc[:, i].max()}')
     # if data_frame.iloc[:, i].max() == data_frame.iloc[:, i].min():
     #     data_frame.iloc[:, i] = 0.0
     #     continue
@@ -117,11 +119,13 @@ def create_sequences(data, seq_length):
     return np.array(xs), np.array(ys)
 
 def plot_predictions(original, predicted, time_steps, data_frame, title):
-    __, axs = plt.subplots(4, 3, figsize=(15, 10))
+    __, axs = plt.subplots(features, 1, figsize=(10, 10*features))
     for i in range(features):
         data_value_label = data_frame.columns[i]
-        row = i // 3
-        col = i % 3
+        # row = i // 3
+        # col = i % 3
+        row = i
+        col = 0
         axs[row, col].plot(time_steps, original[:, i], label=f'Original Data {data_value_label}')
         axs[row, col].plot(time_steps, predicted.detach().numpy()[:, i], label=f'Predicted Data {data_value_label}', linestyle='--')
         axs[row, col].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
@@ -199,7 +203,7 @@ class EarlyStopping:
         self.trace_func = trace_func
         self.model_buffer = io.BytesIO()
 
-    def __call__(self, val_loss, model):
+    def __call__(self, val_loss, model, epoch):
         # Check if validation loss is nan
         if np.isnan(val_loss):
             self.trace_func("Validation loss is NaN. Ignoring this epoch.")
@@ -216,13 +220,14 @@ class EarlyStopping:
         else:
             # No significant improvement
             self.counter += 1
-            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if epoch % 10 == 0:
+                self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
 
-    def save_checkpoint(self, val_loss, model):
+    def save_checkpoint(self, val_loss, model, epoch):
         '''Saves model when validation loss decreases.'''
-        if self.verbose:
+        if self.verbose and epoch % 10 == 0:
             self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.model_buffer)
         self.model_buffer.seek(0)
@@ -267,7 +272,7 @@ for epoch in range(num_epochs):
         val_loss_float = val_loss.item()
 
     # print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
-    early_stopper(val_loss_float, model)
+    early_stopper(val_loss_float, model, epoch)
     if (epoch+1) % 10 == 0:
         current_time = time.time()
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
