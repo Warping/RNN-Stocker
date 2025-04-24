@@ -126,12 +126,12 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
         # col = i % 3
         row = i
         col = 0
-        axs[row, col].plot(time_steps, original[:, i], label=f'Original Data {data_value_label}')
-        axs[row, col].plot(time_steps, predicted.detach().numpy()[:, i], label=f'Predicted Data {data_value_label}', linestyle='--')
-        axs[row, col].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
-        axs[row, col].set_xlabel('Time Step')
-        axs[row, col].set_ylabel(data_value_label)
-        axs[row, col].legend()
+        axs[row].plot(time_steps, original[:, i], label=f'Original Data {data_value_label}')
+        axs[row].plot(time_steps, predicted.detach().numpy()[:, i], label=f'Predicted Data {data_value_label}', linestyle='--')
+        axs[row].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
+        axs[row].set_xlabel('Time Step')
+        axs[row].set_ylabel(data_value_label)
+        axs[row].legend()
     plt.title(title)
     plt.savefig("./output/" + title + ".png")
 
