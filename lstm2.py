@@ -20,7 +20,7 @@ learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
 
 # Early stopping
-patience = 100
+patience = 200
 delta = 0.0
 
 # Stock data
