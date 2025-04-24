@@ -106,11 +106,11 @@ def create_sequences(data, seq_length):
     return np.array(xs), np.array(ys)
 
 def plot_predictions(original, predicted, time_steps, data_frame, title):
-    __, axs = plt.subplots(4, features//3, figsize=(15, 10))
+    __, axs = plt.subplots(4, 3, figsize=(15, 10))
     for i in range(features):
         data_value_label = data_frame.columns[i]
         row = i // 3
-        col = i % (features//3)
+        col = i % 3
         axs[row, col].plot(time_steps, original[:, i], label=f'Original Data {data_value_label}')
         axs[row, col].plot(time_steps, predicted.detach().numpy()[:, i], label=f'Predicted Data {data_value_label}', linestyle='--')
         axs[row, col].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
