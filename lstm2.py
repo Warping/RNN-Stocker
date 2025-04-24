@@ -13,6 +13,7 @@ import io
 
 # Constants
 seq_length = 30 # Number of time steps to look back
+avg_period = 30 # Number of days to average over
 num_epochs = 10000 # Number of epochs
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
@@ -20,7 +21,7 @@ learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
 
 # Early stopping
-patience = 200
+patience = 100
 delta = 0.0
 
 # Stock data
@@ -48,6 +49,16 @@ except FileNotFoundError:
 # Drop unnecessary columns
 cont_data_frame = cont_data_frame.drop(columns=['SMA', 'WMA'])
 features = len(cont_data_frame.columns)
+
+# Normalize every avg_period day period to avg_period day average
+for i in range(0, len(cont_data_frame), avg_period):
+    if i + avg_period > len(cont_data_frame):
+        # Remove last period if it is not complete
+        cont_data_frame = cont_data_frame.iloc[:i]
+        break
+    cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] - cont_data_frame.iloc[i:i+avg_period, :].mean()
+    cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
+    # cont_data_frame.iloc[i:i+30, :] = cont_data_frame.iloc[i:i+30, :] / cont_data_frame.iloc[i:i+30, :].std()
  
 for i in range(features):
     # Normalize data to be between 0 and 1
