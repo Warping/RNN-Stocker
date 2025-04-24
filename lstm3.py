@@ -170,7 +170,7 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
         axs[row].set_xlabel('Time Step')
         axs[row].set_ylabel(data_value_label)
         axs[row].legend()
-    plt.title(title)
+    plt.suptitle(title)
     plt.savefig("./output/" + title + ".png")
 
 # Generate synthetic data
@@ -343,7 +343,7 @@ model = early_stopper.get_model()
 model.eval()
 predicted, _, _ = model(trainX, h0, c0)
 
-original = data[seq_length:]
+original = y  # Use the target data directly, which has the correct shape
 time_steps = np.arange(seq_length, len(data))
 
 predicted = predicted.cpu()
