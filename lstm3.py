@@ -382,6 +382,26 @@ predicted_val = predicted_val.cpu()
 
 plot_predictions(original_val, predicted_val, time_steps_val, data_frame, 'LSTM Model nth Prediction vs. Original Data (Validation)')
 
+# Pull 30 input sample from the last 30 days of data
+last_30_days = data_full[-(seq_length+prediction_steps):-prediction_steps]
+last_40_days = data_full[-(seq_length+prediction_steps):]
+last_30_days = torch.tensor(last_30_days, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
+# Predict the next 10 days
+model.eval()
+predicted_future, _, _ = model(last_30_days, h0, c0)
+predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, features)
+# Plot the 30 input samples and the 10 predicted samples in different colors
+plt.figure(figsize=(15, 10))
+for i in range(features):
+    plt.subplot(features, 1, i + 1)
+    plt.plot(np.arange(seq_length), last_30_days[0, :, i].numpy(), label='Input Data', color='blue')
+    plt.plot(np.arange(seq_length, seq_length + prediction_steps), predicted_future[:, i], label='Predicted Data', color='red')
+    plt.plot(np.arange(seq_length, seq_length + prediction_steps), last_40_days[-prediction_steps:, i], label='Actual Data', color='green')
+    plt.title(f'Predicted Future Data for Feature {i+1}')
+    plt.xlabel('Time Step')
+    plt.ylabel(data_frame.columns[i])
+    plt.legend()
+
 plt.show()
 
 
