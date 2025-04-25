@@ -27,21 +27,19 @@ Requires CUDA Toolkit (12.4 or 12.8)</p><h5>Steps</h5><ul>
 </ul><ul>
 <li>pip install --pre torch torchaudio torchvision --index-url https://download.pytorch.org/whl/nightly/cu128</li>
 </ul><ul>
-<li>pip install early-stopping-pytorch</li>
-</ul><ul>
-<li>python.exe .\lstm2.py</li>
+<li>python.exe .\lstm3.py</li>
 </ul><h2>Usage</h2>
 <hr><p>Can modify hyperparameters, early stopping rules, stock data preprocessing</p><h2>Project Status</h2>
 <hr><p>Currently in progress: ETA - May 1st 2025</p><h2>Improvements</h2>
 <hr><ul>
 <li>Better Validation Set Selection</li>
 </ul><ul>
-<li>Fix overfitting issues</li>
+<li>Fix overfitting issues DONE!</li>
 </ul><ul>
 <li>Fix underfitting on binarized data</li>
 </ul><h2>Features that can be added</h2>
 <hr><ul>
-<li>Add trendline prediction visualizations</li>
+<li>Add trendline prediction visualizations DONE!</li>
 </ul><ul>
 <li>Add real-time model training on current data</li>
 </ul><ul>
