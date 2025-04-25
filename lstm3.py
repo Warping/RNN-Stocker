@@ -373,8 +373,8 @@ plot_predictions(original, predicted, time_steps, data_frame, 'LSTM Model Predic
 h0, c0 = None, None  # Reset hidden and cell states for validation
 predicted_val, _, _ = model(valX, h0, c0)
 
-original_val = data_val[seq_length:]
-time_steps_val = np.arange(seq_length, len(data_val))
+original_val = y_val  # Use the target data directly, which has the correct shape
+time_steps_val = np.arange(len(original_val))  # One time step per sequence
 
 predicted_val = predicted_val.cpu()
 
