@@ -382,28 +382,53 @@ predicted_val = predicted_val.cpu()
 
 plot_predictions(original_val, predicted_val, time_steps_val, data_frame, 'LSTM Model nth Prediction vs. Original Data (Validation)')
 
-# Pull 30 input sample from the last 30 days of data
-last_30_days = data_full[-(seq_length+prediction_steps):-prediction_steps]
-last_40_days = data_full[-(seq_length+prediction_steps):]
-last_30_days = torch.tensor(last_30_days, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
+# Plot the last seq_length + prediction_steps data points
+ground_truth = data_full[-(seq_length+prediction_steps):]
+# Take subset of ground_truth to act as input
+sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
+sampled_input = torch.tensor(sampled_input, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
 # Predict the next 10 days
 model.eval()
-predicted_future, _, _ = model(last_30_days, h0, c0)
+predicted_future, _, _ = model(sampled_input, h0, c0)
 predicted_future = predicted_future.cpu()
 predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, features)
-# Plot the 30 input samples and the 10 predicted samples in different colors
+# Concatenate the input and predicted data
+predicted_future = np.concatenate((sampled_input[0].cpu().numpy(), predicted_future), axis=0)
+
+# Check if the predicted future data is the same shape as the ground truth
+print(f'Predicted future data shape: {predicted_future.shape}')
+print(f'Ground truth shape: {ground_truth.shape}')
+
+# Plot ground truth and predicted future data
 plt.figure(figsize=(15, 10 * features))
 for i in range(features):
     plt.subplot(features, 1, i + 1)
-    plt.plot(np.arange(seq_length), last_30_days[0, :, i].cpu().numpy(), label='Input Data', color='blue')  # Move to CPU
-    plt.plot(np.arange(seq_length, seq_length + prediction_steps), predicted_future[:, i], label='Predicted Data', color='red')
-    plt.plot(np.arange(seq_length, seq_length + prediction_steps), last_40_days[-prediction_steps:, i], label='Actual Data', color='green')
-    plt.title(f'Predicted Future Data for Feature {i+1}')
-    plt.xlabel('Time Step')
-    plt.ylabel(data_frame.columns[i])
-    plt.legend()
+    plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
+    plt.plot(np.arange(len(predicted_future)), predicted_future[:, i], label='Predicted Future', color='red', linestyle='--')
 
-plt.tight_layout()
+# Pull 30 input sample from the last 30 days of data
+# last_30_days = data_full[-(seq_length+prediction_steps):-prediction_steps]
+# last_40_days = data_full[-(seq_length+prediction_steps):]
+# last_30_days = torch.tensor(last_30_days, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
+# # Predict the next 10 days
+# model.eval()
+# predicted_future, _, _ = model(last_30_days, h0, c0)
+# predicted_future = predicted_future.cpu()
+# predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, features)
+# # Plot the 30 input samples and the 10 predicted samples in different colors
+# plt.figure(figsize=(15, 10 * features))
+# for i in range(features):
+#     plt.subplot(features, 1, i + 1)
+#     plt.plot(np.arange(seq_length), last_30_days[0, :, i].cpu().numpy(), label='Input Data', color='blue')  # Move to CPU
+#     plt.plot(np.arange(seq_length, seq_length + prediction_steps), predicted_future[:, i], label='Predicted Data', color='red')
+#     plt.plot(np.arange(seq_length, seq_length + prediction_steps), last_40_days[-prediction_steps:, i], label='Actual Data', color='green')
+#     plt.title(f'Predicted Future Data for Feature {i+1}')
+#     plt.xlabel('Time Step')
+#     plt.ylabel(data_frame.columns[i])
+#     plt.legend()
+
+# plt.tight_layout()
+
 plt.show()
 
 
