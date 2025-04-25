@@ -1,140 +1,151 @@
-# Full autoregressive code updated with MOM lag features
-
 import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import yfinance as yf
-import time
 import io
 
-# Constants
+# === Simulated Data Setup (replace with real) ===
+np.random.seed(0)
+num_features = 10
+num_days = 1000
 seq_length = 30
-output_horizon = 10
-hidden_dim = 500
-layer_dim = 2
-learning_rate = 0.00005
-training_size = 0.7
-stock = '^GSPC'
-period = '10y'
+prediction_steps = 10
 
-# Device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-torch.set_default_device(device)
+# Create dummy data with MOM
+data = np.random.randn(num_days, num_features)
+mom_data = np.random.randn(num_days, 1)
+full_data = np.concatenate((data, mom_data), axis=1)
 
-# Load and process data
-try:
-    cont_data_frame = pd.read_csv(f'data/{stock}_{period}_data_cont.csv')
-except FileNotFoundError:
-    stock_data = yf.Ticker(stock).history(period=period, interval='1d')
-    sti = StockTechnicalIndicators(stock_data)
-    cont_data_frame, _ = sti.get_dataframes(days=30, interval=1)
-    cont_data_frame.to_csv(f'data/{stock}_{period}_data_cont.csv', index=False)
+columns = [f'Feat_{i}' for i in range(num_features)] + ['MOM']
+data_frame = pd.DataFrame(full_data, columns=columns)
 
-# Add MOM lag features
-if 'MOM' in cont_data_frame.columns:
-    cont_data_frame['MOM_lag1'] = cont_data_frame['MOM'].shift(1)
-    cont_data_frame['MOM_lag2'] = cont_data_frame['MOM'].shift(2)
-    cont_data_frame.dropna(inplace=True)  # Remove rows with NaNs from shift
-
-features = len(cont_data_frame.columns)
-data_frame = cont_data_frame.copy()
-
-# Normalize to [0, 1]
-for i in range(features):
-    col = data_frame.columns[i]
-    min_val = data_frame[col].min()
-    max_val = data_frame[col].max()
-    data_frame[col] = (data_frame[col] - min_val) / (max_val - min_val)
-
-# Train/val split
-data = data_frame.to_numpy()
-train_size = int(training_size * len(data))
-data_train = data[:train_size]
-data_val = data[train_size:]
-
-def create_sequences(data, seq_length):
+# === Sequence Preparation ===
+def create_sequences(data, seq_length, prediction_steps):
     xs, ys = [], []
-    for i in range(len(data) - seq_length):
-        x = data[i:i + seq_length]
-        y = data[i + seq_length]  # Next step only
+    for i in range(len(data) - seq_length - prediction_steps + 1):
+        x = data[i:i+seq_length]
+        y = data[i+seq_length:i+seq_length+prediction_steps]
         xs.append(x)
         ys.append(y)
     return np.array(xs), np.array(ys)
 
-X, y = create_sequences(data_train, seq_length)
-X_val, y_val = create_sequences(data_val, seq_length)
+mom_index = data_frame.columns.get_loc('MOM')
+features = data_frame.shape[1]
+data_np = data_frame.to_numpy()
+X, y_full = create_sequences(data_np, seq_length, prediction_steps)
 
-trainX = torch.tensor(X, dtype=torch.float32)
-trainY = torch.tensor(y, dtype=torch.float32)
-valX = torch.tensor(X_val, dtype=torch.float32)
-valY = torch.tensor(y_val, dtype=torch.float32)
+# MOM as the only output
+y_mom = y_full[:, :, mom_index]
+y_mom = np.expand_dims(y_mom, axis=2)
 
-# Model definition
-class LSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
-        super(LSTMModel, self).__init__()
+# === Split into Train and Validation ===
+split = int(0.7 * len(X))
+trainX, valX = torch.tensor(X[:split], dtype=torch.float32), torch.tensor(X[split:], dtype=torch.float32)
+trainY, valY = torch.tensor(y_mom[:split], dtype=torch.float32), torch.tensor(y_mom[split:], dtype=torch.float32)
+
+# === MOM-only LSTM Model ===
+class LSTMModelMOM(nn.Module):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim=1):
+        super(LSTMModelMOM, self).__init__()
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
-        h0 = torch.zeros(layer_dim, x.size(0), hidden_dim).to(x.device)
-        c0 = torch.zeros(layer_dim, x.size(0), hidden_dim).to(x.device)
+        h0 = torch.zeros(layer_dim, x.size(0), hidden_dim)
+        c0 = torch.zeros(layer_dim, x.size(0), hidden_dim)
         out, _ = self.lstm(x, (h0, c0))
         out = self.fc(out[:, -1, :])
-        return out.unsqueeze(1)
+        return out.view(out.size(0), -1, 1)
 
-model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=features).to(device)
+# === Early Stopping Class ===
+class EarlyStopping:
+    def __init__(self, patience=20, delta=0.0, verbose=True):
+        self.patience = patience
+        self.delta = delta
+        self.counter = 0
+        self.best_val_loss = None
+        self.early_stop = False
+        self.val_loss_min = np.inf
+        self.verbose = verbose
+        self.model_buffer = io.BytesIO()
 
+    def __call__(self, val_loss, model):
+        if self.best_val_loss is None:
+            self.best_val_loss = val_loss
+            self.save_checkpoint(val_loss, model)
+        elif val_loss < self.best_val_loss - self.delta:
+            self.best_val_loss = val_loss
+            self.save_checkpoint(val_loss, model)
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.verbose:
+                print(f'EarlyStopping counter: {self.counter} / {self.patience}')
+            if self.counter >= self.patience:
+                self.early_stop = True
+
+    def save_checkpoint(self, val_loss, model):
+        if self.verbose:
+            print(f'Validation loss decreased ({self.val_loss_min:.6f} → {val_loss:.6f}). Saving model...')
+        torch.save(model.state_dict(), self.model_buffer)
+        self.model_buffer.seek(0)
+        self.val_loss_min = val_loss
+
+    def get_model(self, input_dim, hidden_dim, layer_dim):
+        model = LSTMModelMOM(input_dim, hidden_dim, layer_dim)
+        model.load_state_dict(torch.load(self.model_buffer))
+        return model
+
+# === Training Parameters ===
+hidden_dim = 64
+layer_dim = 2
+learning_rate = 0.001
+num_epochs = 200
+patience = 30
+
+model = LSTMModelMOM(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim)
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+early_stopper = EarlyStopping(patience=patience, verbose=True)
 
-# Training loop
-for epoch in range(100):
+# === Training Loop with Early Stopping ===
+for epoch in range(num_epochs):
     model.train()
-    output = model(trainX)
-    loss = criterion(output.squeeze(1), trainY)
     optimizer.zero_grad()
+    output = model(trainX)
+    loss = criterion(output, trainY)
     loss.backward()
     optimizer.step()
 
-    if (epoch + 1) % 10 == 0:
-        model.eval()
-        val_output = model(valX)
-        val_loss = criterion(val_output.squeeze(1), valY)
-        print(f"Epoch [{epoch+1}/100], Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}")
-
-# Forecast future
-def autoregressive_forecast(model, initial_seq, steps):
     model.eval()
-    current_seq = initial_seq.clone()
-    preds = []
     with torch.no_grad():
-        for _ in range(steps):
-            next_step = model(current_seq)
-            preds.append(next_step.squeeze(1).cpu().numpy())
-            current_seq = torch.cat((current_seq[:, 1:, :], next_step), dim=1)
-    return np.array(preds)
+        val_output = model(valX)
+        val_loss = criterion(val_output, valY)
 
-initial_input = valX[-1:].to(device)
-auto_preds = autoregressive_forecast(model, initial_input, output_horizon)
+    print(f"Epoch [{epoch+1}/{num_epochs}] Loss: {loss.item():.4f} | Val Loss: {val_loss.item():.4f}")
+    early_stopper(val_loss.item(), model)
 
-# Plot results
-def plot_autoregressive_preds(preds, df):
-    time_steps = np.arange(preds.shape[0])
-    num_features = preds.shape[1]
+    if early_stopper.early_stop:
+        print("Early stopping triggered.")
+        break
 
-    plt.figure(figsize=(15, num_features * 2))
-    for i in range(num_features):
-        plt.subplot(num_features, 1, i + 1)
-        plt.plot(time_steps, preds[:, i], label=f"Predicted {df.columns[i]}")
-        plt.title(f"Autoregressive Forecast - {df.columns[i]}")
-        plt.xlabel("Step")
-        plt.ylabel(df.columns[i])
-        plt.legend()
-        plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+# === Load Best Model ===
+model = early_stopper.get_model(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim)
 
-plot_autoregressive_preds(auto_preds, data_frame)
+# === Plot Predictions ===
+model.eval()
+with torch.no_grad():
+    final_pred = model(valX).squeeze().numpy()
+    actual_val = valY.squeeze().numpy()
+
+plt.figure(figsize=(12, 5))
+plt.plot(actual_val, label='Actual MOM')
+plt.plot(final_pred, label='Predicted MOM', linestyle='--')
+plt.title("LSTM MOM Prediction with Early Stopping")
+plt.xlabel("Time Step")
+plt.ylabel("MOM")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
