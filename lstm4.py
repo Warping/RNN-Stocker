@@ -1,4 +1,4 @@
-# Improved Autoregressive Version (based on your original multi-step model structure)
+# Full autoregressive code updated with MOM lag features
 
 import torch
 import torch.nn as nn
@@ -23,7 +23,7 @@ period = '10y'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.set_default_device(device)
 
-# Load data
+# Load and process data
 try:
     cont_data_frame = pd.read_csv(f'data/{stock}_{period}_data_cont.csv')
 except FileNotFoundError:
@@ -32,10 +32,16 @@ except FileNotFoundError:
     cont_data_frame, _ = sti.get_dataframes(days=30, interval=1)
     cont_data_frame.to_csv(f'data/{stock}_{period}_data_cont.csv', index=False)
 
+# Add MOM lag features
+if 'MOM' in cont_data_frame.columns:
+    cont_data_frame['MOM_lag1'] = cont_data_frame['MOM'].shift(1)
+    cont_data_frame['MOM_lag2'] = cont_data_frame['MOM'].shift(2)
+    cont_data_frame.dropna(inplace=True)  # Remove rows with NaNs from shift
+
 features = len(cont_data_frame.columns)
 data_frame = cont_data_frame.copy()
 
-# Normalize data to [0, 1]
+# Normalize to [0, 1]
 for i in range(features):
     col = data_frame.columns[i]
     min_val = data_frame[col].min()
@@ -65,15 +71,7 @@ trainY = torch.tensor(y, dtype=torch.float32)
 valX = torch.tensor(X_val, dtype=torch.float32)
 valY = torch.tensor(y_val, dtype=torch.float32)
 
-# Model
-def init_weights(m):
-    if isinstance(m, nn.Linear) or isinstance(m, nn.LSTM):
-        for name, param in m.named_parameters():
-            if 'weight' in name:
-                nn.init.xavier_uniform_(param)
-            elif 'bias' in name:
-                nn.init.zeros_(param)
-
+# Model definition
 class LSTMModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
         super(LSTMModel, self).__init__()
@@ -84,21 +82,19 @@ class LSTMModel(nn.Module):
         h0 = torch.zeros(layer_dim, x.size(0), hidden_dim).to(x.device)
         c0 = torch.zeros(layer_dim, x.size(0), hidden_dim).to(x.device)
         out, _ = self.lstm(x, (h0, c0))
-        out = self.fc(out[:, -1, :])  # last time step only
+        out = self.fc(out[:, -1, :])
         return out.unsqueeze(1)
 
-model = LSTMModel(features, hidden_dim, layer_dim, features).to(device)
-model.apply(init_weights)
+model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=features).to(device)
 
-# Training
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+# Training loop
 for epoch in range(100):
     model.train()
     output = model(trainX)
     loss = criterion(output.squeeze(1), trainY)
-
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -109,7 +105,7 @@ for epoch in range(100):
         val_loss = criterion(val_output.squeeze(1), valY)
         print(f"Epoch [{epoch+1}/100], Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}")
 
-# Autoregressive inference
+# Forecast future
 def autoregressive_forecast(model, initial_seq, steps):
     model.eval()
     current_seq = initial_seq.clone()
@@ -121,13 +117,10 @@ def autoregressive_forecast(model, initial_seq, steps):
             current_seq = torch.cat((current_seq[:, 1:, :], next_step), dim=1)
     return np.array(preds)
 
-# Forecast future
 initial_input = valX[-1:].to(device)
 auto_preds = autoregressive_forecast(model, initial_input, output_horizon)
 
-# Plot
-import matplotlib.pyplot as plt
-
+# Plot results
 def plot_autoregressive_preds(preds, df):
     time_steps = np.arange(preds.shape[0])
     num_features = preds.shape[1]
