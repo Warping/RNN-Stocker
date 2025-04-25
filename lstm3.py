@@ -18,6 +18,7 @@ hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
+prediction_steps = 10  # Number of steps to predict ahead
 
 # Early stopping
 patience = 100
@@ -149,7 +150,7 @@ torch.set_default_device(device)
 np.random.seed(0)
 torch.manual_seed(0)
 
-def create_sequences(data, seq_length, prediction_steps=10):
+def create_sequences(data, seq_length, prediction_steps):
     xs = []
     ys = []
     for i in range(len(data) - seq_length - prediction_steps + 1):
@@ -161,7 +162,7 @@ def create_sequences(data, seq_length, prediction_steps=10):
 
 def plot_predictions(original, predicted, time_steps, data_frame, title):
     """
-    Plot multi-step predictions vs. original data.
+    Plot the 10th prediction vs. original data.
 
     Args:
         original: Ground truth data (shape: [num_samples, prediction_steps, features]).
@@ -171,20 +172,20 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
         title: Title of the plot.
     """
     num_samples, prediction_steps, features = original.shape
+
     __, axs = plt.subplots(features, 1, figsize=(15, 10 * features))
 
     for i in range(features):
         data_value_label = data_frame.columns[i]
         row = i
 
-        # Flatten the time steps and predictions for plotting
-        expanded_time_steps = np.repeat(time_steps, prediction_steps)
-        original_flat = original[:, :, i].flatten()
-        predicted_flat = predicted.detach().numpy()[:, :, i].flatten()
+        # Extract the 10th prediction
+        original_nth = original[:, prediction_steps - 1, i]  # 10th step (index 9)
+        predicted_nth = predicted.detach().numpy()[:, prediction_steps - 1, i]  # 10th step (index 9)
 
-        axs[row].plot(expanded_time_steps, original_flat, label=f'Original Data {data_value_label}')
-        axs[row].plot(expanded_time_steps, predicted_flat, label=f'Predicted Data {data_value_label}', linestyle='--')
-        axs[row].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
+        axs[row].plot(time_steps, original_nth, label=f'Original Data {data_value_label}')
+        axs[row].plot(time_steps, predicted_nth, label=f'Predicted Data {data_value_label}', linestyle='--')
+        axs[row].set_title(f'LSTM Model 10th Prediction vs. Original Data {data_value_label}')
         axs[row].set_xlabel('Time Step')
         axs[row].set_ylabel(data_value_label)
         axs[row].legend()
@@ -201,8 +202,6 @@ t_train = t_full[:train_upper_bound]
 data_full = data_frame.to_numpy()
 # Slice data into training and validation data
 data = data_full[:train_upper_bound]
-
-prediction_steps = 10  # Number of steps to predict ahead
 
 X, y = create_sequences(data, seq_length, prediction_steps)
 trainX = torch.tensor(X, dtype=torch.float32)
@@ -367,7 +366,7 @@ time_steps = np.arange(len(original))  # One time step per sequence
 
 predicted = predicted.cpu()
 
-plot_predictions(original, predicted, time_steps, data_frame, 'LSTM Model Predictions vs. Original Data (Training)')
+plot_predictions(original, predicted, time_steps, data_frame, 'LSTM Model nth Prediction vs. Original Data (Training)')
 
 # Plot the predictions for validation data
 h0, c0 = None, None  # Reset hidden and cell states for validation
@@ -378,6 +377,6 @@ time_steps_val = np.arange(len(original_val))  # One time step per sequence
 
 predicted_val = predicted_val.cpu()
 
-plot_predictions(original_val, predicted_val, time_steps_val, data_frame, 'LSTM Model Predictions vs. Original Data (Validation)')
+plot_predictions(original_val, predicted_val, time_steps_val, data_frame, 'LSTM Model nth Prediction vs. Original Data (Validation)')
 
 plt.show()
