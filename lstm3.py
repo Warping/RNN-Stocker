@@ -12,17 +12,17 @@ import argparse
 from scipy.ndimage import gaussian_filter
 
 # Constants
-seq_length = 30 # Number of time steps to look back
+seq_length = 120 # Number of time steps to look back
 avg_period = 30 # Number of days to average over
 num_epochs = 10000 # Number of epochs
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
-prediction_steps = 10  # Number of steps to predict ahead
+prediction_steps = 20  # Number of steps to predict ahead
 
 # Early stopping
-patience = 200
+patience = 500
 delta = 0.0
 
 # Stock data
@@ -66,14 +66,14 @@ prediction_steps = args.prediction_steps
 # Print the arguments
 print(f'Sequence Length: {seq_length}')
 print(f'Average Period: {avg_period}')
-print(f'Prediction Steps: {prediction_steps}')
+print(f'Prediction Steps: {prediction_steps}\n')
 print(f'Number of Epochs: {num_epochs}')
 print(f'Hidden Dimension: {hidden_dim}')
 print(f'Layer Dimension: {layer_dim}')
 print(f'Learning Rate: {learning_rate}')
-print(f'Training Size: {training_size}')
+print(f'Training Size: {training_size}\n')
 print(f'Patience: {patience}')
-print(f'Delta: {delta}')
+print(f'Delta: {delta}\n')
 print(f'Stock: {stock}')
 print(f'Period: {period}')
 
