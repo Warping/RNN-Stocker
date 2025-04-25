@@ -395,7 +395,7 @@ predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, f
 plt.figure(figsize=(15, 10))
 for i in range(features):
     plt.subplot(features, 1, i + 1)
-    plt.plot(np.arange(seq_length), last_30_days[0, :, i].numpy(), label='Input Data', color='blue')
+    plt.plot(np.arange(seq_length), last_30_days[0, :, i].cpu().numpy(), label='Input Data', color='blue')  # Move to CPU
     plt.plot(np.arange(seq_length, seq_length + prediction_steps), predicted_future[:, i], label='Predicted Data', color='red')
     plt.plot(np.arange(seq_length, seq_length + prediction_steps), last_40_days[-prediction_steps:, i], label='Actual Data', color='green')
     plt.title(f'Predicted Future Data for Feature {i+1}')
@@ -403,6 +403,7 @@ for i in range(features):
     plt.ylabel(data_frame.columns[i])
     plt.legend()
 
+plt.tight_layout()
 plt.show()
 
 
