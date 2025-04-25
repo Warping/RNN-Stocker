@@ -383,3 +383,5 @@ predicted_val = predicted_val.cpu()
 plot_predictions(original_val, predicted_val, time_steps_val, data_frame, 'LSTM Model nth Prediction vs. Original Data (Validation)')
 
 plt.show()
+
+
