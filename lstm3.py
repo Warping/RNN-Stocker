@@ -18,7 +18,7 @@ hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
-prediction_steps = 10  # Number of steps to predict ahead
+prediction_steps = 5  # Number of steps to predict ahead
 
 # Early stopping
 patience = 100
@@ -41,6 +41,7 @@ parser.add_argument('--stock', type=str, default=stock, help=f'Stock ticker -- D
 parser.add_argument('--period', type=str, default=period, help=f'Period to fetch data for -- Default= {period}')
 parser.add_argument('--patience', type=int, default=patience, help=f'Early stopping patience -- Default= {patience}')
 parser.add_argument('--delta', type=float, default=delta, help=f'Early stopping delta -- Default= {delta}')
+parser.add_argument('--prediction_steps', type=int, default=prediction_steps, help=f'Number of steps to predict ahead -- Default= {prediction_steps}')
 
 args = parser.parse_args()
 # Update constants with command line arguments
@@ -55,6 +56,7 @@ patience = args.patience
 delta = args.delta
 stock = args.stock
 period = args.period
+prediction_steps = args.prediction_steps
 
 # Print the arguments
 print(f'Sequence Length: {seq_length}')
