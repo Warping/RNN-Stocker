@@ -28,6 +28,10 @@ delta = 0.0
 stock = '^GSPC'
 period = '10y'
 
+# Columns to drop from the data frame
+# drop_columns = ['SMA', 'WMA', 'MOM', 'STCK', 'STCD', 'RSI', 'MACD', 'LWR', 'ADO', 'CCI']
+drop_columns = ['SMA', 'WMA']
+
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='LSTM Stock Price Prediction')
 parser.add_argument('--seq_length', type=int, default=seq_length, help=f'Number of time steps to look back -- Default= {seq_length}')
@@ -92,7 +96,7 @@ except FileNotFoundError:
     print(f'Saved Processed {stock}_{period}_ data to file')
     
 # Drop unnecessary columns
-# cont_data_frame = cont_data_frame.drop(columns=['SMA', 'WMA'])
+cont_data_frame = cont_data_frame.drop(columns=drop_columns)
 features = len(cont_data_frame.columns)
 
 # Normalize every avg_period day period to avg_period day average
@@ -405,6 +409,11 @@ for i in range(features):
     plt.subplot(features, 1, i + 1)
     plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
     plt.plot(np.arange(len(predicted_future)), predicted_future[:, i], label='Predicted Future', color='red', linestyle='--')
+    plt.title(f'Predicted Future Data for Feature {i+1}')
+    plt.xlabel('Time Step')
+    plt.ylabel(data_frame.columns[i])
+    plt.legend()
+    
 
 # Pull 30 input sample from the last 30 days of data
 # last_30_days = data_full[-(seq_length+prediction_steps):-prediction_steps]
