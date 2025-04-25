@@ -389,6 +389,7 @@ last_30_days = torch.tensor(last_30_days, dtype=torch.float32).unsqueeze(0)  # A
 # Predict the next 10 days
 model.eval()
 predicted_future, _, _ = model(last_30_days, h0, c0)
+predicted_future = predicted_future.cpu()
 predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, features)
 # Plot the 30 input samples and the 10 predicted samples in different colors
 plt.figure(figsize=(15, 10))
