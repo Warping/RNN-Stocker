@@ -3,3 +3,5 @@
 *.pyc
 .venv/
 *.whl
+model_visualizer.ipynb
+bsucantsee.txt
