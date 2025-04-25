@@ -21,7 +21,7 @@ training_size = 0.70  # Percentage of data to use for training
 prediction_steps = 10  # Number of steps to predict ahead
 
 # Early stopping
-patience = 100
+patience = 200
 delta = 0.0
 
 # Stock data
@@ -41,6 +41,7 @@ parser.add_argument('--stock', type=str, default=stock, help=f'Stock ticker -- D
 parser.add_argument('--period', type=str, default=period, help=f'Period to fetch data for -- Default= {period}')
 parser.add_argument('--patience', type=int, default=patience, help=f'Early stopping patience -- Default= {patience}')
 parser.add_argument('--delta', type=float, default=delta, help=f'Early stopping delta -- Default= {delta}')
+parser.add_argument('--prediction_steps', type=int, default=prediction_steps, help=f'Number of steps to predict ahead -- Default= {prediction_steps}')
 
 args = parser.parse_args()
 # Update constants with command line arguments
@@ -55,6 +56,7 @@ patience = args.patience
 delta = args.delta
 stock = args.stock
 period = args.period
+prediction_steps = args.prediction_steps
 
 # Print the arguments
 print(f'Sequence Length: {seq_length}')
@@ -68,6 +70,7 @@ print(f'Patience: {patience}')
 print(f'Delta: {delta}')
 print(f'Stock: {stock}')
 print(f'Period: {period}')
+print(f'Prediction Steps: {prediction_steps}')
 
 # Check data folder for csv file of stock data
 try:
