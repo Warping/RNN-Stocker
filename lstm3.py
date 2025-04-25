@@ -160,16 +160,35 @@ def create_sequences(data, seq_length, prediction_steps=10):
     return np.array(xs), np.array(ys)
 
 def plot_predictions(original, predicted, time_steps, data_frame, title):
+    """
+    Plot multi-step predictions vs. original data.
+
+    Args:
+        original: Ground truth data (shape: [num_samples, prediction_steps, features]).
+        predicted: Predicted data (shape: [num_samples, prediction_steps, features]).
+        time_steps: Array of time steps corresponding to the sequences.
+        data_frame: DataFrame containing feature names.
+        title: Title of the plot.
+    """
+    num_samples, prediction_steps, features = original.shape
     __, axs = plt.subplots(features, 1, figsize=(15, 10 * features))
+
     for i in range(features):
         data_value_label = data_frame.columns[i]
         row = i
-        axs[row].plot(time_steps, original[:, :, i].flatten(), label=f'Original Data {data_value_label}')
-        axs[row].plot(time_steps, predicted.detach().numpy()[:, :, i].flatten(), label=f'Predicted Data {data_value_label}', linestyle='--')
+
+        # Flatten the time steps and predictions for plotting
+        expanded_time_steps = np.repeat(time_steps, prediction_steps)
+        original_flat = original[:, :, i].flatten()
+        predicted_flat = predicted.detach().numpy()[:, :, i].flatten()
+
+        axs[row].plot(expanded_time_steps, original_flat, label=f'Original Data {data_value_label}')
+        axs[row].plot(expanded_time_steps, predicted_flat, label=f'Predicted Data {data_value_label}', linestyle='--')
         axs[row].set_title(f'LSTM Model Predictions vs. Original Data {data_value_label}')
         axs[row].set_xlabel('Time Step')
         axs[row].set_ylabel(data_value_label)
         axs[row].legend()
+
     plt.suptitle(title)
     plt.savefig("./output/" + title + ".png")
 
@@ -344,7 +363,7 @@ model.eval()
 predicted, _, _ = model(trainX, h0, c0)
 
 original = y  # Use the target data directly, which has the correct shape
-time_steps = np.arange(seq_length, len(data))
+time_steps = np.arange(len(original))  # One time step per sequence
 
 predicted = predicted.cpu()
 
