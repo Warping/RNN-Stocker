@@ -9,6 +9,7 @@ import time
 import pandas as pd
 import io
 import argparse
+from scipy.ndimage import gaussian_filter
 
 # Constants
 seq_length = 30 # Number of time steps to look back
@@ -113,7 +114,11 @@ for i in range(0, len(cont_data_frame), avg_period):
     # cont_data_frame.iloc[i:i+30, :] = cont_data_frame.iloc[i:i+30, :] / cont_data_frame.iloc[i:i+30, :].std()
 
 # Apply gaussian filter to smooth data
+# Apply rolling mean to smooth data
 cont_data_frame = cont_data_frame.rolling(window=avg_period, min_periods=1).mean()
+
+# Apply Gaussian filter for additional smoothing
+cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
 print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
