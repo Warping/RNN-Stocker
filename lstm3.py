@@ -19,7 +19,7 @@ hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
-prediction_steps = 20  # Number of steps to predict ahead
+prediction_steps = 30  # Number of steps to predict ahead
 
 # Early stopping
 patience = 500
@@ -31,7 +31,7 @@ period = '10y'
 
 # Columns to drop from the data frame
 # drop_columns = ['SMA', 'WMA', 'MOM', 'STCK', 'STCD', 'RSI', 'MACD', 'LWR', 'ADO', 'CCI']
-drop_columns = ['SMA', 'WMA']
+drop_columns = ['SMA', 'WMA', 'STCD']
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='LSTM Stock Price Prediction')
