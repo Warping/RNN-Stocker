@@ -31,7 +31,7 @@ period = '10y'
 
 # Columns to drop from the data frame
 # drop_columns = ['SMA', 'WMA', 'MOM', 'STCK', 'STCD', 'RSI', 'MACD', 'LWR', 'ADO', 'CCI']
-drop_columns = ['SMA', 'WMA', 'STCD']
+drop_columns = ['STCD']
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='LSTM Stock Price Prediction')
@@ -47,6 +47,7 @@ parser.add_argument('--period', type=str, default=period, help=f'Period to fetch
 parser.add_argument('--patience', type=int, default=patience, help=f'Early stopping patience -- Default= {patience}')
 parser.add_argument('--delta', type=float, default=delta, help=f'Early stopping delta -- Default= {delta}')
 parser.add_argument('--prediction_steps', type=int, default=prediction_steps, help=f'Number of steps to predict ahead -- Default= {prediction_steps}')
+parser.add_argument('--drop_columns', type=str, default=drop_columns, help=f'Columns to drop from the data frame -- Default= {drop_columns}')
 
 args = parser.parse_args()
 # Update constants with command line arguments
@@ -62,6 +63,10 @@ delta = args.delta
 stock = args.stock
 period = args.period
 prediction_steps = args.prediction_steps
+drop_columns = args.drop_columns
+# Convert drop_columns to a list if it's a string
+if isinstance(drop_columns, str):
+    drop_columns = drop_columns.strip('[ ]').split(',')
 
 # Print the arguments
 print(f'Sequence Length: {seq_length}')
