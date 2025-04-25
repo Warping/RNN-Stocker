@@ -18,10 +18,10 @@ hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
-prediction_steps = 5  # Number of steps to predict ahead
+prediction_steps = 10  # Number of steps to predict ahead
 
 # Early stopping
-patience = 100
+patience = 200
 delta = 0.0
 
 # Stock data
@@ -70,6 +70,7 @@ print(f'Patience: {patience}')
 print(f'Delta: {delta}')
 print(f'Stock: {stock}')
 print(f'Period: {period}')
+print(f'Prediction Steps: {prediction_steps}')
 
 # Check data folder for csv file of stock data
 try:
