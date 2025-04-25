@@ -392,7 +392,7 @@ predicted_future, _, _ = model(last_30_days, h0, c0)
 predicted_future = predicted_future.cpu()
 predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, features)
 # Plot the 30 input samples and the 10 predicted samples in different colors
-plt.figure(figsize=(15, 10))
+plt.figure(figsize=(15, 10 * features))
 for i in range(features):
     plt.subplot(features, 1, i + 1)
     plt.plot(np.arange(seq_length), last_30_days[0, :, i].cpu().numpy(), label='Input Data', color='blue')  # Move to CPU
