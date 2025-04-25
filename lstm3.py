@@ -65,6 +65,7 @@ prediction_steps = args.prediction_steps
 # Print the arguments
 print(f'Sequence Length: {seq_length}')
 print(f'Average Period: {avg_period}')
+print(f'Prediction Steps: {prediction_steps}')
 print(f'Number of Epochs: {num_epochs}')
 print(f'Hidden Dimension: {hidden_dim}')
 print(f'Layer Dimension: {layer_dim}')
@@ -74,7 +75,7 @@ print(f'Patience: {patience}')
 print(f'Delta: {delta}')
 print(f'Stock: {stock}')
 print(f'Period: {period}')
-print(f'Prediction Steps: {prediction_steps}')
+
 
 # Check data folder for csv file of stock data
 try:
@@ -110,6 +111,9 @@ for i in range(0, len(cont_data_frame), avg_period):
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] - cont_data_frame.iloc[i:i+avg_period, :].mean()
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
     # cont_data_frame.iloc[i:i+30, :] = cont_data_frame.iloc[i:i+30, :] / cont_data_frame.iloc[i:i+30, :].std()
+
+# Apply gaussian filter to smooth data
+cont_data_frame = cont_data_frame.rolling(window=avg_period, min_periods=1).mean()
 
 print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
