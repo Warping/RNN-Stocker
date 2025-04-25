@@ -130,9 +130,11 @@ import matplotlib.pyplot as plt
 
 def plot_autoregressive_preds(preds, df):
     time_steps = np.arange(preds.shape[0])
-    plt.figure(figsize=(15, features * 2))
-    for i in range(features):
-        plt.subplot(features, 1, i + 1)
+    num_features = preds.shape[1]
+
+    plt.figure(figsize=(15, num_features * 2))
+    for i in range(num_features):
+        plt.subplot(num_features, 1, i + 1)
         plt.plot(time_steps, preds[:, i], label=f"Predicted {df.columns[i]}")
         plt.title(f"Autoregressive Forecast - {df.columns[i]}")
         plt.xlabel("Step")
@@ -143,4 +145,3 @@ def plot_autoregressive_preds(preds, df):
     plt.show()
 
 plot_autoregressive_preds(auto_preds, data_frame)
-#add line
