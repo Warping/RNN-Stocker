@@ -459,7 +459,7 @@ plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")
 #     plt.legend()
 
 # plt.tight_layout()
-
+torch.cuda.empty_cache()
 plt.show()
 
 
