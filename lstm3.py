@@ -21,6 +21,7 @@ layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
 training_size = 0.70  # Percentage of data to use for training
 prediction_steps = 30  # Number of steps to predict ahead
+prediction_smoothing = 3  # Number of steps to smooth the prediction
 
 # Early stopping
 patience = 500
@@ -49,6 +50,7 @@ parser.add_argument('--patience', type=int, default=patience, help=f'Early stopp
 parser.add_argument('--delta', type=float, default=delta, help=f'Early stopping delta -- Default= {delta}')
 parser.add_argument('--prediction_steps', type=int, default=prediction_steps, help=f'Number of steps to predict ahead -- Default= {prediction_steps}')
 parser.add_argument('--drop_columns', type=str, default=drop_columns, help=f'Columns to drop from the data frame -- Default= {drop_columns}')
+parser.add_argument('--prediction_smoothing', type=int, default=prediction_smoothing, help=f'Number of steps to smooth the prediction -- Default= {prediction_smoothing}')
 
 args = parser.parse_args()
 # Update constants with command line arguments
@@ -64,6 +66,7 @@ delta = args.delta
 stock = args.stock
 period = args.period
 prediction_steps = args.prediction_steps
+prediction_smoothing = args.prediction_smoothing
 drop_columns = args.drop_columns
 # Convert drop_columns to a list if it's a string
 if isinstance(drop_columns, str):
@@ -73,6 +76,7 @@ if isinstance(drop_columns, str):
 print(f'Sequence Length: {seq_length}')
 print(f'Average Period: {avg_period}')
 print(f'Prediction Steps: {prediction_steps}\n')
+print(f'Prediction Smoothing: {prediction_smoothing}')
 print(f'Number of Epochs: {num_epochs}')
 print(f'Hidden Dimension: {hidden_dim}')
 print(f'Layer Dimension: {layer_dim}')
@@ -81,6 +85,7 @@ print(f'Training Size: {training_size}\n')
 print(f'Patience: {patience}')
 print(f'Delta: {delta}\n')
 print(f'Stock: {stock}')
+print(f'Drop Columns: {drop_columns}')
 print(f'Period: {period}')
 
 
@@ -428,8 +433,8 @@ input_2_tensor = torch.tensor(input_2, dtype=torch.float32).unsqueeze(0)  # Add 
 predicted, _, _ = model(input_2_tensor, h0, c0)
 predicted = predicted.cpu()
 predicted = predicted.detach().numpy().reshape(prediction_steps, features)
-# Smooth the predicted data
-predicted_smooth = pd.DataFrame(predicted, columns=data_frame.columns).rolling(window=avg_period, min_periods=1).mean().to_numpy()
+# Smooth the predicted data by finding a smooth curve through the points
+predicted_smooth = pd.DataFrame(predicted, columns=data_frame.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
 # Apply Gaussian filter for additional smoothing
 # predicted_smooth = pd.DataFrame(predicted_smooth, columns=data_frame.columns).apply(lambda x: gaussian_filter(x, sigma=2), axis=0).to_numpy()
 
