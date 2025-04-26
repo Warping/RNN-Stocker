@@ -10,7 +10,7 @@ import pandas as pd
 import io
 import argparse
 from scipy.ndimage import gaussian_filter
-from time import datetime
+from datetime import datetime
 
 # Constants
 seq_length = 120 # Number of time steps to look back
@@ -380,7 +380,8 @@ print(f'Training stopped. Total time: {total_time:.2f} seconds')
 model = early_stopper.get_model()
 
 print(f'Saving model to file...')
-torch.save(model.state_dict(), f'./output/{stock}_{period}_model.pth')
+current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+torch.save(model.state_dict(), f'./output/{stock}_{period}_{current_date}_model.pth')
 
 # Plot the predictions for training data
 model.eval()
@@ -391,7 +392,7 @@ time_steps = np.arange(len(original))  # One time step per sequence
 
 predicted = predicted.cpu()
 
-plot_predictions(original, predicted, time_steps, data_frame, f'{stock}_{period} (Training)')
+plot_predictions(original, predicted, time_steps, data_frame, f'{stock}_{period}_{current_date}_(Training)')
 
 # Plot the predictions for validation data
 h0, c0 = None, None  # Reset hidden and cell states for validation
@@ -402,7 +403,7 @@ time_steps_val = np.arange(len(original_val))  # One time step per sequence
 
 predicted_val = predicted_val.cpu()
 
-plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{stock}_{period} (Validation)')
+plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{stock}_{period}_{current_date}_(Validation)')
 
 # Plot the last seq_length + prediction_steps data points
 ground_truth = data_full[-(seq_length+prediction_steps):]
@@ -433,7 +434,7 @@ for i in range(features):
     plt.legend()
 
 plt.suptitle(f'{stock}_{period} (Predicted Future)')
-plt.savefig(f"./output/{stock}_{period}_predicted_future.png")
+plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")
     
 
 # Pull 30 input sample from the last 30 days of data
