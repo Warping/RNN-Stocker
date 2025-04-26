@@ -411,6 +411,7 @@ ground_truth = data_full[-(seq_length+2*prediction_steps):]
 # Take subset of ground_truth to act as input
 # sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
 predicted_output = ground_truth[:seq_length+prediction_steps] # Use the first seq_length data points
+predicted_output_2 = ground_truth[:seq_length+prediction_steps] # Use the first seq_length data points
 for i in range(prediction_steps):
     ith_input = ground_truth[i:i+seq_length]
     ith_input = torch.tensor(ith_input, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
@@ -421,28 +422,45 @@ for i in range(prediction_steps):
     ith_predicted = ith_predicted[-1, :]
     # Concatenate the ith predicted data point to the sampled input
     predicted_output = np.concatenate((predicted_output, ith_predicted.reshape(1, -1)), axis=0)
-    
+
+input_2 = ground_truth[prediction_steps:seq_length+prediction_steps] # Use the first seq_length data points
+input_2 = torch.tensor(input_2, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
+predicted, _, _ = model(input_2, h0, c0)
+predicted = predicted.cpu()
+predicted = predicted.detach().numpy().reshape(prediction_steps, features)
+predicted_output_2 = np.concatenate((predicted_output_2, predicted), axis=0)
+
+
 # Check if the sampled input is the same shape as the ground truth
-print(f'Sampled input shape: {predicted_output.shape}')
+print(f'Predicted_1 shape: {predicted_output.shape}')
 print(f'Ground truth shape: {ground_truth.shape}')
+print(f'Predicted_2 shape: {predicted_output_2.shape}')
 
 # Plot the sampled input and predicted future data
 plt.figure(figsize=(15, 10 * features))
 for i in range(features):
     plt.subplot(features, 1, i + 1)
-    plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output', color='red', linestyle='--')
+    plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output 1', color='red', linestyle='--')
     plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
+    plt.plot(np.arange(len(predicted_output_2)), predicted_output_2[:, i], label='Predicted Output 2', color='green', linestyle='--')
     plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
     plt.xlabel('Time Step')
     plt.ylabel(data_frame.columns[i])
     plt.legend()
-    
 
+plt.suptitle(f'{stock}_{period} (Predicted Future)')
+plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")    
+
+# # Plot the last seq_length + prediction_steps data points
+# ground_truth = data_full[-(seq_length+prediction_steps):]
+# # ground_truth = data_full[-(seq_length+2*prediction_steps):]
+# # Take subset of ground_truth to act as input
+# sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
     
 
 # sampled_input = torch.tensor(sampled_input, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
-# Predict the next 10 days
-# model.eval()
+# # Predict the next 10 days
+# # model.eval()
 
 # predicted_future, _, _ = model(sampled_input, h0, c0)
 # predicted_future = predicted_future.cpu()
@@ -464,9 +482,6 @@ for i in range(features):
 #     plt.xlabel('Time Step')
 #     plt.ylabel(data_frame.columns[i])
 #     plt.legend()
-
-plt.suptitle(f'{stock}_{period} (Predicted Future)')
-plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")
 
 torch.cuda.empty_cache()
 plt.show()
