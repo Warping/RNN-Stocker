@@ -428,7 +428,7 @@ ground_truth = data_full[-(seq_length+prediction_steps):]
 #     # Concatenate the ith predicted data point to the sampled input
 #     predicted_output = np.concatenate((predicted_output, ith_predicted.reshape(1, -1)), axis=0)
 
-input_2 = ground_truth[1:seq_length+1] # Use the first seq_length data points
+input_2 = ground_truth[:seq_length] # Use the first seq_length data points
 input_2_tensor = torch.tensor(input_2, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
 predicted, _, _ = model(input_2_tensor, h0, c0)
 predicted = predicted.cpu()
