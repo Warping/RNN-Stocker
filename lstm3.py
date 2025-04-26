@@ -428,7 +428,7 @@ ground_truth = data_full[-(seq_length+prediction_steps):]
 #     # Concatenate the ith predicted data point to the sampled input
 #     predicted_output = np.concatenate((predicted_output, ith_predicted.reshape(1, -1)), axis=0)
 
-input_2 = ground_truth[:seq_length] # Use the first seq_length data points
+input_2 = ground_truth[1:seq_length+1] # Use the first seq_length data points
 input_2_tensor = torch.tensor(input_2, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
 predicted, _, _ = model(input_2_tensor, h0, c0)
 predicted = predicted.cpu()
@@ -456,7 +456,7 @@ for i in range(features):
     # plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output 1', color='red', linestyle='--')
     plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
     plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output', color='green', linestyle='--')
-    # plt.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], label='Predicted Output Smoothed', color='red', linestyle='--')
+    plt.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], label='Predicted Output Smoothed', color='red', linestyle='--')
     plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
     plt.xlabel('Time Step')
     plt.ylabel(data_frame.columns[i])
