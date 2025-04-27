@@ -19,7 +19,9 @@ num_epochs = 10000 # Number of epochs
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
-training_size = 0.70  # Percentage of data to use for training
+training_size = 0.60  # Percentage of data to use for training
+validation_size = 0.30  # Percentage of data to use for validation
+test_size = 0.10  # Percentage of data to use for testing
 prediction_steps = 30  # Number of steps to predict ahead
 prediction_smoothing = 3  # Number of steps to smooth the prediction
 
@@ -99,6 +101,7 @@ except FileNotFoundError:
         stock_data = pd.read_csv(f'data/{stock}_{period}_data.csv')
         print(f'Loaded {stock}_{period}_ data from file')
     except FileNotFoundError:
+        print(f'Loading {stock}_{period}_ data from Yahoo Finance')
         stock_data = yf.Ticker(stock).history(period=period, interval='1d')
         stock_data.to_csv(f'data/{stock}_{period}_data.csv')
         print(f'Loaded {stock}_{period}_ data from Yahoo Finance') 
@@ -224,6 +227,7 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
 # t is a list of indices from 0 to len(data_frame)
 t_full = np.linspace(0, len(data_frame), len(data_frame), endpoint=False, dtype=int)
 train_upper_bound = int(training_size*len(t_full))
+val_upper_bound = int((training_size + validation_size)*len(t_full))
 t_train = t_full[:train_upper_bound]
 # data = np.array([fromiter(t_train, i) for i in range(features)]).T  # Generate 10 input features
 data_full = data_frame.to_numpy()
@@ -236,13 +240,25 @@ trainY = torch.tensor(y, dtype=torch.float32)
 
 # Generate synthetic validation data
 # t_val = t_full[-100:]  # Use 100 data points for validation
-t_val = t_full[train_upper_bound:]
+t_val = t_full[train_upper_bound:val_upper_bound]
 # data_val = np.array([fromiter(t_val, i) for i in range(features)]).T  # Generate 10 input features
-data_val = data_full[train_upper_bound:]
+data_val = data_full[train_upper_bound:val_upper_bound]
 
 X_val, y_val = create_sequences(data_val, seq_length, prediction_steps)
 valX = torch.tensor(X_val, dtype=torch.float32)
 valY = torch.tensor(y_val, dtype=torch.float32)
+
+# Generate synthetic test data
+t_test = t_full[val_upper_bound:]  # Use 100 data points for testing
+data_test = data_full[val_upper_bound:]
+X_test, y_test = create_sequences(data_test, seq_length, prediction_steps)
+testX = torch.tensor(X_test, dtype=torch.float32)
+testY = torch.tensor(y_test, dtype=torch.float32)
+
+print(f'Training data shape: {trainX.shape}, {trainY.shape}')
+print(f'Validation data shape: {valX.shape}, {valY.shape}')
+print(f'Test data shape: {testX.shape}, {testY.shape}')
+
 
 class LSTMModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
@@ -366,12 +382,17 @@ for epoch in range(num_epochs):
         predicted, _, _ = model(valX, h0_val, c0_val)
         val_loss = criterion(predicted, valY)  # valY also contains 10 steps
         val_loss_float = val_loss.item()
+        
+        h0_test, c0_test = None, None  # Reset hidden and cell states for test
+        predicted_test, _, _ = model(testX, h0_test, c0_test)
+        test_loss = criterion(predicted_test, testY)  # testY also contains 10 steps
+        test_loss_float = test_loss.item()
 
 # print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
     early_stopper(val_loss_float, model, epoch)
     if (epoch+1) % 10 == 0:
         current_time = time.time()
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}, Test Loss: {test_loss_float:.4f}')
         print(f'Time: {current_time - last_time:.2f} seconds')
         start_time = last_time
     if early_stopper.early_stop:
@@ -411,7 +432,7 @@ predicted_val = predicted_val.cpu()
 plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{stock}_{period}_{current_date}_(Validation)')
 
 # Plot the last seq_length + prediction_steps data points
-ground_truth = data_full[-(seq_length+prediction_steps):]
+ground_truth = data_test[-(seq_length+prediction_steps):]
 
 # ground_truth = data_full[-(seq_length+2*prediction_steps):]
 # Take subset of ground_truth to act as input
@@ -438,8 +459,8 @@ predicted = predicted.detach().numpy().reshape(prediction_steps, features)
 predicted_smooth = pd.DataFrame(predicted, columns=data_frame.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
 
 
-future_data = data_full[-(seq_length):]
-future_data_smooth = data_full[-(seq_length):]
+future_data = data_test[-(seq_length):]
+future_data_smooth = data_test[-(seq_length):]
 future_data_tensor = torch.tensor(future_data, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
 future_predicted, _, _ = model(future_data_tensor, h0, c0)
 future_predicted = future_predicted.cpu()
