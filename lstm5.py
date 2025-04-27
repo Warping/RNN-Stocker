@@ -294,17 +294,25 @@ class LSTMModel(nn.Module):
         super(LSTMModel, self).__init__()
         self.hidden_dim = hidden_dim
         self.layer_dim = layer_dim
+
+        # LSTM layer
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
+
+        # Fully connected layer
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x, h0=None, c0=None):
+        # Dynamically initialize hidden states if not provided
         if h0 is None or c0 is None:
-            h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).to(x.device)
-            c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).to(x.device)
-        
+            batch_size = x.size(0)  # Get the batch size from the input
+            h0 = torch.zeros(self.layer_dim, batch_size, self.hidden_dim).to(x.device)
+            c0 = torch.zeros(self.layer_dim, batch_size, self.hidden_dim).to(x.device)
+
+        # Forward propagate through LSTM
         out, (hn, cn) = self.lstm(x, (h0, c0))
+
+        # Fully connected layer for the last time step
         out = self.fc(out[:, -1, :])  # Output for the last time step
-        out = out.view(out.size(0), -1, features)  # Reshape to (batch_size, prediction_steps, features)
         return out, hn, cn
 
 class EarlyStopping:
@@ -408,31 +416,30 @@ for epoch in range(num_epochs):
     train_loss = 0.0
 
     for batch_X, batch_Y in train_loader:
+        batch_X, batch_Y = batch_X.to(device), batch_Y.to(device)  # Move batch to device
         optimizer.zero_grad()
 
         # Forward pass
-        outputs, h0, c0 = model(batch_X, h0, c0)
+        outputs, _, _ = model(batch_X)  # No need to pass h0 and c0
 
         # Calculate loss
         loss = criterion(outputs, batch_Y)
         loss.backward()
         optimizer.step()
 
-        # Detach hidden states to prevent memory buildup
-        h0 = h0.detach()
-        c0 = c0.detach()
-
         train_loss += loss.item()
 
-    # Validation loop
+    # Validation loop (similar to training loop)
     val_loss = 0.0
     with torch.no_grad():
         model.eval()
         for batch_X, batch_Y in val_loader:
-            predicted, _, _ = model(batch_X, None, None)
+            batch_X, batch_Y = batch_X.to(device), batch_Y.to(device)
+            predicted, _, _ = model(batch_X)
             val_loss += criterion(predicted, batch_Y).item()
-            
+
         for batch_X, batch_Y in test_loader:
+            batch_X, batch_Y = batch_X.to(device), batch_Y.to(device)
             predicted, _, _ = model(batch_X, None, None)
             test_loss += criterion(predicted, batch_Y).item()
             
@@ -441,7 +448,7 @@ for epoch in range(num_epochs):
     val_loss /= len(val_loader)
     test_loss /= len(test_loader)
 
-    # Print progress
+# Print progress
     if (epoch + 1) % 10 == 0:
         print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Test Loss: {test_loss:.4f}")
 
