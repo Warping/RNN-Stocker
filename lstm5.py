@@ -375,7 +375,7 @@ class EarlyStopping:
 
     def get_model(self):
         # Use the correct output_dim for multi-step predictions
-        output_dim = features * prediction_steps  # Ensure this matches the model used during training
+        output_dim = features  # Ensure this matches the model used during training
         model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=output_dim, prediction_steps=prediction_steps)
         model.load_state_dict(torch.load(self.model_buffer))
         return model
