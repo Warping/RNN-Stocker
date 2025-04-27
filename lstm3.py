@@ -412,6 +412,7 @@ plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{sto
 
 # Plot the last seq_length + prediction_steps data points
 ground_truth = data_full[-(seq_length+prediction_steps):]
+
 # ground_truth = data_full[-(seq_length+2*prediction_steps):]
 # Take subset of ground_truth to act as input
 # sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
@@ -436,17 +437,32 @@ predicted = predicted.detach().numpy().reshape(prediction_steps, features)
 # Smooth the predicted data by finding a smooth curve through the points
 predicted_smooth = pd.DataFrame(predicted, columns=data_frame.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
 
+
+future_data = data_full[-(seq_length):]
+future_data_smooth = data_full[-(seq_length):]
+future_data_tensor = torch.tensor(future_data, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
+future_predicted, _, _ = model(future_data_tensor, h0, c0)
+future_predicted = future_predicted.cpu()
+future_predicted = future_predicted.detach().numpy().reshape(prediction_steps, features)
+# Smooth the predicted data by finding a smooth curve through the points
+future_predicted_smooth = pd.DataFrame(future_predicted, columns=data_frame.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
+
+
 # Apply Gaussian filter for additional smoothing
 # predicted_smooth = pd.DataFrame(predicted_smooth, columns=data_frame.columns).apply(lambda x: gaussian_filter(x, sigma=2), axis=0).to_numpy()
 
 predicted_output = np.concatenate((input_2, predicted), axis=0)
 predicted_output_smooth = np.concatenate((input_2, predicted_smooth), axis=0)
+future_data = np.concatenate((future_data, future_predicted), axis=0)
+future_data_smooth = np.concatenate((future_data_smooth, future_predicted_smooth), axis=0)
 
 # Check if the sampled input is the same shape as the ground truth
 # print(f'Predicted_1 shape: {predicted_output.shape}')
 print(f'Ground truth shape: {ground_truth.shape}')
 print(f'Predicted shape: {predicted_output.shape}')
 print(f'Predicted Smooth shape: {predicted_output_smooth.shape}')
+print(f'Future Data shape: {future_data.shape}')
+print(f'Future Data Smooth shape: {future_data_smooth.shape}')
 
 
 # Plot the sampled input and predicted future data
@@ -457,13 +473,16 @@ for i in range(features):
     plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
     plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output', color='green', linestyle='--')
     plt.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], label='Predicted Output Smoothed', color='red', linestyle='--')
+    plt.plot(np.arange(len(future_data)), future_data[:, i], label='Future Data', color='orange', linestyle='--')
+    plt.plot(np.arange(len(future_data_smooth)), future_data_smooth[:, i], label='Future Data Smoothed', color='purple', linestyle='--')
+    
     plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
     plt.xlabel('Time Step')
     plt.ylabel(data_frame.columns[i])
     plt.legend()
 
 plt.suptitle(f'{stock}_{period} (Predicted Future)')
-plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")    
+plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")   
 
 # # Plot the last seq_length + prediction_steps data points
 # ground_truth = data_full[-(seq_length+prediction_steps):]
