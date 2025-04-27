@@ -11,12 +11,15 @@ import io
 import argparse
 # from scipy.ndimage import gaussian_filter
 from datetime import datetime
+from torch.utils.data import DataLoader, TensorDataset
+
 torch.cuda.empty_cache()
 
 # Constants
 seq_length = 100 # Number of time steps to look back
 avg_period = 20 # Number of days to average over
 num_epochs = 100000 # Number of epochs
+batch_size = 64  # Adjust this value based on your GPU memory capacity
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.0005 # Learning rate
@@ -81,6 +84,7 @@ prediction_smoothing = args.prediction_smoothing
 drop_columns = args.drop_columns
 verbose = args.verbose
 smoothing_window = args.smoothing_window
+batch_size = args.batch_size
 # Convert drop_columns to a list if it's a string
 if isinstance(drop_columns, str):
     drop_columns = drop_columns.strip('[ ]').split(',')
@@ -91,6 +95,7 @@ print(f'Average Period: {avg_period}')
 print(f'Prediction Steps: {prediction_steps}')
 print(f'Prediction Smoothing: {prediction_smoothing}')
 print(f'Number of Epochs: {num_epochs}')
+print(f'Batch Size: {batch_size}')
 print(f'Hidden Dimension: {hidden_dim}')
 print(f'Layer Dimension: {layer_dim}')
 print(f'Learning Rate: {learning_rate}')
@@ -382,44 +387,62 @@ start_time = time.time()
 last_time = start_time
 current_time = time.time()
 
+# Create DataLoader for training, validation, and test datasets
+train_dataset = TensorDataset(trainX, trainY)
+val_dataset = TensorDataset(valX, valY)
+test_dataset = TensorDataset(testX, testY)
 
-# Training loop
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+# Training loop with batches
 for epoch in range(num_epochs):
     model.train()
-    optimizer.zero_grad()
+    train_loss = 0.0
 
-    outputs, h0, c0 = model(trainX, h0, c0)
+    for batch_X, batch_Y in train_loader:
+        optimizer.zero_grad()
 
-    # Calculate loss for multi-step predictions
-    loss = criterion(outputs, trainY)  # trainY now contains 10 steps
-    loss.backward()
-    optimizer.step()
+        # Forward pass
+        outputs, h0, c0 = model(batch_X, h0, c0)
 
-    h0 = h0.detach()
-    c0 = c0.detach()
-    
-    # Get validation loss
+        # Calculate loss
+        loss = criterion(outputs, batch_Y)
+        loss.backward()
+        optimizer.step()
+
+        # Detach hidden states to prevent memory buildup
+        h0 = h0.detach()
+        c0 = c0.detach()
+
+        train_loss += loss.item()
+
+    # Validation loop
+    val_loss = 0.0
     with torch.no_grad():
         model.eval()
-        h0_val, c0_val = None, None  # Reset hidden and cell states for validation
-        predicted, _, _ = model(valX, h0_val, c0_val)
-        val_loss = criterion(predicted, valY)  # valY also contains 10 steps
-        val_loss_float = val_loss.item()
-        
-        h0_test, c0_test = None, None  # Reset hidden and cell states for test
-        predicted_test, _, _ = model(testX, h0_test, c0_test)
-        test_loss = criterion(predicted_test, testY)  # testY also contains 10 steps
-        test_loss_float = test_loss.item()
+        for batch_X, batch_Y in val_loader:
+            predicted, _, _ = model(batch_X, None, None)
+            val_loss += criterion(predicted, batch_Y).item()
+            
+        for batch_X, batch_Y in test_loader:
+            predicted, _, _ = model(batch_X, None, None)
+            test_loss += criterion(predicted, batch_Y).item()
+            
+    # Average losses
+    train_loss /= len(train_loader)
+    val_loss /= len(val_loader)
+    test_loss /= len(test_loader)
 
-# print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
-    early_stopper(val_loss_float, model, epoch)
-    if (epoch+1) % 10 == 0:
-        current_time = time.time()
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}, Test Loss: {test_loss_float:.4f}')
-        print(f'Time: {current_time - last_time:.2f} seconds')
-        start_time = last_time
+    # Print progress
+    if (epoch + 1) % 10 == 0:
+        print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Test Loss: {test_loss:.4f}")
+
+    # Early stopping
+    early_stopper(val_loss, model, epoch)
     if early_stopper.early_stop:
-        print('Early stopping')
+        print("Early stopping")
         break
 
 
