@@ -376,7 +376,7 @@ class EarlyStopping:
     def get_model(self):
         # Use the correct output_dim for multi-step predictions
         output_dim = features * prediction_steps  # Ensure this matches the model used during training
-        model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=output_dim)
+        model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=output_dim, prediction_steps=prediction_steps)
         model.load_state_dict(torch.load(self.model_buffer))
         return model
     
@@ -459,7 +459,9 @@ for epoch in range(num_epochs):
 # Print progress
     if (epoch + 1) % 10 == 0:
         print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Test Loss: {test_loss:.4f}")
-
+        print(f"Epoch Time: {time.time() - last_time:.2f} seconds")
+        print(f"Total time: {time.time() - start_time:.2f} seconds")
+        last_time = time.time()
     # Early stopping
     early_stopper(val_loss, model, epoch)
     if early_stopper.early_stop:
