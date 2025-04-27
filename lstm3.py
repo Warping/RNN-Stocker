@@ -9,7 +9,7 @@ import time
 import pandas as pd
 import io
 import argparse
-from scipy.ndimage import gaussian_filter
+# from scipy.ndimage import gaussian_filter
 from datetime import datetime
 
 # Constants
@@ -33,6 +33,7 @@ verbose = False
 # Stock data
 stock = '^GSPC'
 period = '10y'
+smoothing_window = 5 # Smoothing window for the data
 
 # Columns to drop from the data frame
 # drop_columns = ['SMA', 'WMA', 'MOM', 'STCK', 'STCD', 'RSI', 'MACD', 'LWR', 'ADO', 'CCI']
@@ -57,6 +58,7 @@ parser.add_argument('--prediction_steps', type=int, default=prediction_steps, he
 parser.add_argument('--drop_columns', type=str, default=drop_columns, help=f'Columns to drop from the data frame -- Default= {drop_columns}')
 parser.add_argument('--prediction_smoothing', type=int, default=prediction_smoothing, help=f'Number of steps to smooth the prediction -- Default= {prediction_smoothing}')
 parser.add_argument('--verbose', type=bool, default=verbose, help=f'Print verbose output -- Default= {verbose}')
+parser.add_argument('--smoothing_window', type=int, default=smoothing_window, help=f'Smoothing window for the data -- Default= {smoothing_window}')
 
 args = parser.parse_args()
 # Update constants with command line arguments
@@ -77,6 +79,7 @@ prediction_steps = args.prediction_steps
 prediction_smoothing = args.prediction_smoothing
 drop_columns = args.drop_columns
 verbose = args.verbose
+smoothing_window = args.smoothing_window
 # Convert drop_columns to a list if it's a string
 if isinstance(drop_columns, str):
     drop_columns = drop_columns.strip('[ ]').split(',')
@@ -101,6 +104,7 @@ print(f'Verbose: {verbose}')
 print(f'Stock: {stock}')
 print(f'Drop Columns: {drop_columns}')
 print(f'Period: {period}')
+print(f'Smoothing Window: {smoothing_window}')
 
 
 # Check data folder for csv file of stock data
@@ -148,12 +152,6 @@ for i in range(0, len(cont_data_frame), avg_period):
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
     # cont_data_frame.iloc[i:i+30, :] = cont_data_frame.iloc[i:i+30, :] / cont_data_frame.iloc[i:i+30, :].std()
 
-# Apply gaussian filter to smooth data
-# Apply rolling mean to smooth data
-
-# cont_data_frame = cont_data_frame.rolling(window=avg_period, min_periods=1).mean()
-# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
-
 print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
     # Normalize data to be between 0 and 1
@@ -163,7 +161,11 @@ for i in range(features):
     #     continue
     cont_data_frame.iloc[:, i] = (cont_data_frame.iloc[:, i] - cont_data_frame.iloc[:, i].min()) / (cont_data_frame.iloc[:, i].max() - cont_data_frame.iloc[:, i].min())
 
+# Apply gaussian filter to smooth data
+# Apply rolling mean to smooth data
 
+cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
+# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
 # data_frame = binary_data_frame
 data_frame = cont_data_frame
