@@ -19,9 +19,9 @@ num_epochs = 10000 # Number of epochs
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
-training_size = 0.60  # Percentage of data to use for training
-validation_size = 0.30  # Percentage of data to use for validation
-test_size = 0.10  # Percentage of data to use for testing
+training_size = 0.70  # Percentage of data to use for training
+validation_size = 0.25  # Percentage of data to use for validation
+test_size = 0.05  # Percentage of data to use for testing
 prediction_steps = 30  # Number of steps to predict ahead
 prediction_smoothing = 3  # Number of steps to smooth the prediction
 
@@ -143,10 +143,9 @@ for i in range(0, len(cont_data_frame), avg_period):
 
 # Apply gaussian filter to smooth data
 # Apply rolling mean to smooth data
-cont_data_frame = cont_data_frame.rolling(window=avg_period, min_periods=1).mean()
 
-# Apply Gaussian filter for additional smoothing
-cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
+# cont_data_frame = cont_data_frame.rolling(window=avg_period, min_periods=1).mean()
+# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
 print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
