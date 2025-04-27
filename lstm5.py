@@ -16,13 +16,13 @@ from torch.utils.data import DataLoader, TensorDataset
 torch.cuda.empty_cache()
 
 # Constants
-seq_length = 100 # Number of time steps to look back
+seq_length = 120 # Number of time steps to look back
 avg_period = 30 # Number of days to average over
-num_epochs = 100000 # Number of epochs
+num_epochs = 10000 # Number of epochs
 batch_size = 64  # Adjust this value based on your GPU memory capacity
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
-learning_rate = 0.0005 # Learning rate
+learning_rate = 0.00005 # Learning rate
 training_size = 0.85  # Percentage of data to use for training
 validation_size = 0.10  # Percentage of data to use for validation
 test_size = 0.05  # Percentage of data to use for testing
@@ -30,8 +30,8 @@ prediction_steps = 20  # Number of steps to predict ahead
 prediction_smoothing = 3  # Number of steps to smooth the prediction
 
 # Early stopping
-patience = 200
-delta = 0.00001
+patience = 100
+delta = 0.0
 verbose = False
 
 # Stock data
@@ -360,15 +360,13 @@ class EarlyStopping:
         else:
             # No significant improvement
             self.counter += 1
-            if self.counter % 10 == 0:
-                self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
 
     def save_checkpoint(self, val_loss, model, epoch):
         '''Saves model when validation loss decreases.'''
-        if self.verbose:
-            self.trace_func(f'Epoch: {epoch} - Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+        self.trace_func(f'Epoch: {epoch} - Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.model_buffer)
         self.model_buffer.seek(0)
         self.val_loss_min = val_loss
@@ -457,11 +455,11 @@ for epoch in range(num_epochs):
     test_loss /= len(test_loader)
 
 # Print progress
-    if (epoch + 1) % 10 == 0:
-        print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Test Loss: {test_loss:.4f}")
-        print(f"Epoch Time: {time.time() - last_time:.2f} seconds")
-        print(f"Total time: {time.time() - start_time:.2f} seconds")
-        last_time = time.time()
+    # if (epoch + 1) % 10 == 0:
+    print(f"Epoch [{epoch+1}/{num_epochs}]\nTrain Loss: \t{train_loss:.7f}\nVal Loss: \t{val_loss:.7f}\nTest Loss: \t{test_loss:.7f}")
+    print(f"Epoch Time: {time.time() - last_time:.2f} seconds")
+    print(f"Total time: {time.time() - start_time:.2f} seconds")
+    last_time = time.time()
     # Early stopping
     early_stopper(val_loss, model, epoch)
     if early_stopper.early_stop:
