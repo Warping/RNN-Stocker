@@ -17,7 +17,7 @@ torch.cuda.empty_cache()
 
 # Constants
 seq_length = 100 # Number of time steps to look back
-avg_period = 20 # Number of days to average over
+avg_period = 30 # Number of days to average over
 num_epochs = 100000 # Number of epochs
 batch_size = 64  # Adjust this value based on your GPU memory capacity
 hidden_dim = 500 # Number of hidden neurons
@@ -26,7 +26,7 @@ learning_rate = 0.0005 # Learning rate
 training_size = 0.85  # Percentage of data to use for training
 validation_size = 0.10  # Percentage of data to use for validation
 test_size = 0.05  # Percentage of data to use for testing
-prediction_steps = 30  # Number of steps to predict ahead
+prediction_steps = 20  # Number of steps to predict ahead
 prediction_smoothing = 3  # Number of steps to smooth the prediction
 
 # Early stopping
@@ -290,16 +290,17 @@ print(f'Test data shape: {testX.shape}, {testY.shape}')
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, prediction_steps):
         super(LSTMModel, self).__init__()
         self.hidden_dim = hidden_dim
         self.layer_dim = layer_dim
+        self.prediction_steps = prediction_steps
 
         # LSTM layer
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
 
         # Fully connected layer
-        self.fc = nn.Linear(hidden_dim, output_dim)
+        self.fc = nn.Linear(hidden_dim, output_dim * prediction_steps)
 
     def forward(self, x, h0=None, c0=None):
         # Dynamically initialize hidden states if not provided
@@ -311,8 +312,9 @@ class LSTMModel(nn.Module):
         # Forward propagate through LSTM
         out, (hn, cn) = self.lstm(x, (h0, c0))
 
-        # Fully connected layer for the last time step
+        # Fully connected layer
         out = self.fc(out[:, -1, :])  # Output for the last time step
+        out = out.view(out.size(0), self.prediction_steps, -1)  # Reshape to match target shape
         return out, hn, cn
 
 class EarlyStopping:
@@ -420,7 +422,10 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
 
         # Forward pass
-        outputs, _, _ = model(batch_X)  # No need to pass h0 and c0
+        outputs, _, _ = model(batch_X)
+
+        # Reshape batch_Y if necessary
+        batch_Y = batch_Y.view(batch_Y.size(0), prediction_steps, -1)
 
         # Calculate loss
         loss = criterion(outputs, batch_Y)
