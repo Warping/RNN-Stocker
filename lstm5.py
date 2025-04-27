@@ -381,7 +381,6 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 early_stopper = EarlyStopping(patience=patience, verbose=verbose, delta=delta)
-
 h0, c0 = None, None
 
 start_time = time.time()
@@ -389,13 +388,19 @@ last_time = start_time
 current_time = time.time()
 
 # Create DataLoader for training, validation, and test datasets
+trainX, trainY = trainX.to(device), trainY.to(device)
+valX, valY = valX.to(device), valY.to(device)
+testX, testY = testX.to(device), testY.to(device)
+trainGen = torch.Generator(device=device)
+valGen = torch.Generator(device=device)
+testGen = torch.Generator(device=device)
 train_dataset = TensorDataset(trainX, trainY)
 val_dataset = TensorDataset(valX, valY)
 test_dataset = TensorDataset(testX, testY)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, generator=trainGen)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, generator=valGen)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, generator=testGen)
 
 # Training loop with batches
 for epoch in range(num_epochs):
