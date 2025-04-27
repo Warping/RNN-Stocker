@@ -26,8 +26,9 @@ prediction_steps = 30  # Number of steps to predict ahead
 prediction_smoothing = 3  # Number of steps to smooth the prediction
 
 # Early stopping
-patience = 500
+patience = 200
 delta = 0.0
+verbose = False
 
 # Stock data
 stock = '^GSPC'
@@ -35,7 +36,7 @@ period = '10y'
 
 # Columns to drop from the data frame
 # drop_columns = ['SMA', 'WMA', 'MOM', 'STCK', 'STCD', 'RSI', 'MACD', 'LWR', 'ADO', 'CCI']
-drop_columns = ['STCD']
+drop_columns = []
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='LSTM Stock Price Prediction')
@@ -53,6 +54,7 @@ parser.add_argument('--delta', type=float, default=delta, help=f'Early stopping 
 parser.add_argument('--prediction_steps', type=int, default=prediction_steps, help=f'Number of steps to predict ahead -- Default= {prediction_steps}')
 parser.add_argument('--drop_columns', type=str, default=drop_columns, help=f'Columns to drop from the data frame -- Default= {drop_columns}')
 parser.add_argument('--prediction_smoothing', type=int, default=prediction_smoothing, help=f'Number of steps to smooth the prediction -- Default= {prediction_smoothing}')
+parser.add_argument('--verbose', type=bool, default=verbose, help=f'Print verbose output -- Default= {verbose}')
 
 args = parser.parse_args()
 # Update constants with command line arguments
@@ -70,6 +72,7 @@ period = args.period
 prediction_steps = args.prediction_steps
 prediction_smoothing = args.prediction_smoothing
 drop_columns = args.drop_columns
+verbose = args.verbose
 # Convert drop_columns to a list if it's a string
 if isinstance(drop_columns, str):
     drop_columns = drop_columns.strip('[ ]').split(',')
@@ -77,15 +80,17 @@ if isinstance(drop_columns, str):
 # Print the arguments
 print(f'Sequence Length: {seq_length}')
 print(f'Average Period: {avg_period}')
-print(f'Prediction Steps: {prediction_steps}\n')
+print(f'Prediction Steps: {prediction_steps}')
 print(f'Prediction Smoothing: {prediction_smoothing}')
 print(f'Number of Epochs: {num_epochs}')
 print(f'Hidden Dimension: {hidden_dim}')
 print(f'Layer Dimension: {layer_dim}')
 print(f'Learning Rate: {learning_rate}')
-print(f'Training Size: {training_size}\n')
+print(f'Training Size: {training_size}')
+print(f'Validation Size: {validation_size}')
 print(f'Patience: {patience}')
-print(f'Delta: {delta}\n')
+print(f'Delta: {delta}')
+print(f'Verbose: {verbose}')
 print(f'Stock: {stock}')
 print(f'Drop Columns: {drop_columns}')
 print(f'Period: {period}')
@@ -112,7 +117,16 @@ except FileNotFoundError:
     print(f'Saved Processed {stock}_{period}_ data to file')
     
 # Drop unnecessary columns
-cont_data_frame = cont_data_frame.drop(columns=drop_columns)
+if drop_columns != []:
+    print(f'Dropping columns: {drop_columns}')
+    # Drop columns from both data frames
+    binary_data_frame = binary_data_frame.drop(columns=drop_columns)
+    # Drop columns from continuous data frame
+    cont_data_frame = cont_data_frame.drop(columns=drop_columns)
+else:
+    print(f'No columns to drop')
+    
+# cont_data_frame = cont_data_frame.drop(columns=drop_columns)
 features = len(cont_data_frame.columns)
 
 # Normalize every avg_period day period to avg_period day average
@@ -280,7 +294,7 @@ class LSTMModel(nn.Module):
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0, trace_func=print):
+    def __init__(self, patience, verbose=False, delta=0, trace_func=print):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -321,15 +335,15 @@ class EarlyStopping:
         else:
             # No significant improvement
             self.counter += 1
-            if epoch % 10 == 0:
+            if self.counter % 10 == 0:
                 self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
 
     def save_checkpoint(self, val_loss, model, epoch):
         '''Saves model when validation loss decreases.'''
-        if self.verbose and epoch % 10 == 0:
-            self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+        if self.verbose:
+            self.trace_func(f'Epoch: {epoch} - Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.model_buffer)
         self.model_buffer.seek(0)
         self.val_loss_min = val_loss
@@ -351,7 +365,7 @@ model = LSTMModel(
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-early_stopper = EarlyStopping(patience=patience, verbose=True, delta=delta)
+early_stopper = EarlyStopping(patience=patience, verbose=verbose, delta=delta)
 
 h0, c0 = None, None
 
@@ -494,16 +508,30 @@ for i in range(features):
     plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
     plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output', color='green', linestyle='--')
     plt.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], label='Predicted Output Smoothed', color='red', linestyle='--')
-    plt.plot(np.arange(len(future_data)), future_data[:, i], label='Future Data', color='orange', linestyle='--')
-    plt.plot(np.arange(len(future_data_smooth)), future_data_smooth[:, i], label='Future Data Smoothed', color='purple', linestyle='--')
-    
     plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
     plt.xlabel('Time Step')
     plt.ylabel(data_frame.columns[i])
     plt.legend()
 
 plt.suptitle(f'{stock}_{period} (Predicted Future)')
-plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")   
+plt.savefig(f"./output/{stock}_{period}_{current_date}_predicted_future.png")
+
+# # Plot the future data and predicted future data
+
+plt.figure(figsize=(15, 10 * features))
+for i in range(features):
+    plt.subplot(features, 1, i + 1)
+    # plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output 1', color='red', linestyle='--')
+    plt.plot(np.arange(len(future_data[:seq_length, i])), future_data[:seq_length, i], label='Ground Truth', color='blue')
+    plt.plot(np.arange(len(future_data)), future_data[:, i], label='Future Data', color='green', linestyle='--')
+    plt.plot(np.arange(len(future_data_smooth)), future_data_smooth[:, i], label='Future Data Smoothed', color='red', linestyle='--')
+    plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
+    plt.xlabel('Time Step')
+    plt.ylabel(data_frame.columns[i])
+    plt.legend()
+    
+plt.suptitle(f'{stock}_{period} (Future Data)')
+plt.savefig(f"./output/{stock}_{period}_{current_date}_future_data.png")
 
 # # Plot the last seq_length + prediction_steps data points
 # ground_truth = data_full[-(seq_length+prediction_steps):]
