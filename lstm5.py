@@ -385,7 +385,8 @@ model = LSTMModel(
     input_dim=features,
     hidden_dim=hidden_dim,
     layer_dim=layer_dim,
-    output_dim=features * prediction_steps
+    output_dim=features,
+    prediction_steps=prediction_steps
 )
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
