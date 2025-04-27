@@ -19,9 +19,9 @@ num_epochs = 10000 # Number of epochs
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.00005 # Learning rate
-training_size = 0.70  # Percentage of data to use for training
+training_size = 0.65  # Percentage of data to use for training
 validation_size = 0.25  # Percentage of data to use for validation
-test_size = 0.05  # Percentage of data to use for testing
+test_size = 0.10  # Percentage of data to use for testing
 prediction_steps = 30  # Number of steps to predict ahead
 prediction_smoothing = 3  # Number of steps to smooth the prediction
 
@@ -47,6 +47,8 @@ parser.add_argument('--hidden_dim', type=int, default=hidden_dim, help=f'Number 
 parser.add_argument('--layer_dim', type=int, default=layer_dim, help=f'Number of hidden layers -- Default= {layer_dim}')
 parser.add_argument('--learning_rate', type=float, default=learning_rate, help=f'Learning rate -- Default= {learning_rate}')
 parser.add_argument('--training_size', type=float, default=training_size, help=f'Percentage of data to use for training -- Default= {training_size}')
+parser.add_argument('--validation_size', type=float, default=validation_size, help=f'Percentage of data to use for validation -- Default= {validation_size}')
+parser.add_argument('--test_size', type=float, default=test_size, help=f'Percentage of data to use for testing -- Default= {test_size}')
 parser.add_argument('--stock', type=str, default=stock, help=f'Stock ticker -- Default= {stock}')
 parser.add_argument('--period', type=str, default=period, help=f'Period to fetch data for -- Default= {period}')
 parser.add_argument('--patience', type=int, default=patience, help=f'Early stopping patience -- Default= {patience}')
@@ -65,6 +67,8 @@ hidden_dim = args.hidden_dim
 layer_dim = args.layer_dim
 learning_rate = args.learning_rate
 training_size = args.training_size
+validation_size = args.validation_size
+test_size = args.test_size
 patience = args.patience
 delta = args.delta
 stock = args.stock
@@ -88,6 +92,9 @@ print(f'Layer Dimension: {layer_dim}')
 print(f'Learning Rate: {learning_rate}')
 print(f'Training Size: {training_size}')
 print(f'Validation Size: {validation_size}')
+print(f'Test Size: {test_size}')
+if training_size + validation_size + test_size != 1.0:
+    print(f'Warning: Training size + Validation size + Test size != 1.0. Training size: {training_size}, Validation size: {validation_size}, Test size: {test_size}')
 print(f'Patience: {patience}')
 print(f'Delta: {delta}')
 print(f'Verbose: {verbose}')
