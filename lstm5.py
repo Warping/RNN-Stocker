@@ -417,6 +417,8 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, gen
 for epoch in range(num_epochs):
     model.train()
     train_loss = 0.0
+    val_loss = 0.0
+    test_loss = 0.0
 
     for batch_X, batch_Y in train_loader:
         batch_X, batch_Y = batch_X.to(device), batch_Y.to(device)  # Move batch to device
