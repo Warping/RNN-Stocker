@@ -9,7 +9,7 @@ import time
 import pandas as pd
 import io
 import argparse
-# from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter
 from datetime import datetime
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -172,7 +172,7 @@ for i in range(features):
 # Apply rolling mean to smooth data
 
 cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
-# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
+cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
 # data_frame = binary_data_frame
 data_frame = cont_data_frame
