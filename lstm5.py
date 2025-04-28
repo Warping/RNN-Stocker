@@ -157,7 +157,6 @@ for i in range(0, len(cont_data_frame), avg_period):
         break
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] - cont_data_frame.iloc[i:i+avg_period, :].mean()
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
-    # cont_data_frame.iloc[i:i+30, :] = cont_data_frame.iloc[i:i+30, :] / cont_data_frame.iloc[i:i+30, :].std()
 
 print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
@@ -170,7 +169,6 @@ for i in range(features):
 
 # Apply gaussian filter to smooth data
 # Apply rolling mean to smooth data
-
 cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
 cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
@@ -179,19 +177,6 @@ data_frame = cont_data_frame
     
 data_frame.to_csv(f'data/{stock}_{period}_data_frame_normalized.csv', index=False)
 print(f'Saved Normalized {stock}_{period}_ data to file')
-
-# Plot data_frame['VAL'] for len(data_frame) days
-# plt.figure(figsize=(12, 6))
-# plt.plot(data_frame['VAL'])
-# plt.title(f'{stock} Stock Price')
-# plt.xlabel('Time Step')
-# plt.ylabel('Price')
-# plt.show()
-
-# def data_grabber(time_step_index, feauture_index):
-#     # return np.sin(time_step_index*(feauture_index + 1)) # This is a dummy function. Replace this with your data grabber function
-#     # return feauture_index
-#     return data_frame.iloc[time_step_index, feauture_index]
 
 if torch.cuda.is_available():
     device = torch.device('cuda')
@@ -252,32 +237,27 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
     plt.suptitle(title)
     plt.savefig("./output/" + title + ".png")
 
-# Generate synthetic data
-# t is a list of indices from 0 to len(data_frame)
+# Generate train data
 t_full = np.linspace(0, len(data_frame), len(data_frame), endpoint=False, dtype=int)
 train_upper_bound = int(training_size*len(t_full))
 val_upper_bound = int((training_size + validation_size)*len(t_full))
 t_train = t_full[:train_upper_bound]
-# data = np.array([fromiter(t_train, i) for i in range(features)]).T  # Generate 10 input features
 data_full = data_frame.to_numpy()
-# Slice data into training and validation data
 data = data_full[:train_upper_bound]
 
 X, y = create_sequences(data, seq_length, prediction_steps)
 trainX = torch.tensor(X, dtype=torch.float32)
 trainY = torch.tensor(y, dtype=torch.float32)
 
-# Generate synthetic validation data
-# t_val = t_full[-100:]  # Use 100 data points for validation
+# Generate validation data
 t_val = t_full[train_upper_bound:val_upper_bound]
-# data_val = np.array([fromiter(t_val, i) for i in range(features)]).T  # Generate 10 input features
 data_val = data_full[train_upper_bound:val_upper_bound]
 
 X_val, y_val = create_sequences(data_val, seq_length, prediction_steps)
 valX = torch.tensor(X_val, dtype=torch.float32)
 valY = torch.tensor(y_val, dtype=torch.float32)
 
-# Generate synthetic test data
+# Generate test data
 t_test = t_full[val_upper_bound:]  # Use 100 data points for testing
 data_test = data_full[val_upper_bound:]
 X_test, y_test = create_sequences(data_test, seq_length, prediction_steps)
@@ -454,8 +434,7 @@ for epoch in range(num_epochs):
     val_loss /= len(val_loader)
     test_loss /= len(test_loader)
 
-# Print progress
-    # if (epoch + 1) % 10 == 0:
+    # Print progress
     print(f"Epoch [{epoch+1}/{num_epochs}]\nTrain Loss: \t{train_loss:.7f}\nVal Loss: \t{val_loss:.7f}\nTest Loss: \t{test_loss:.7f}")
     print(f"Epoch Time: {time.time() - last_time:.2f} seconds")
     print(f"Total time: {time.time() - start_time:.2f} seconds")
@@ -500,23 +479,6 @@ model.eval()
 
 # Plot the last seq_length + prediction_steps data points
 ground_truth = data_test[-(seq_length+prediction_steps):]
-
-# ground_truth = data_full[-(seq_length+2*prediction_steps):]
-# Take subset of ground_truth to act as input
-# sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
-# predicted_output = ground_truth[:seq_length+prediction_steps] # Use the first seq_length data points
-# predicted_output_2 = ground_truth[:seq_length+prediction_steps] # Use the first seq_length data points
-# for i in range(prediction_steps):
-#     ith_input = ground_truth[i:i+seq_length]
-#     ith_input = torch.tensor(ith_input, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
-#     ith_predicted, _, _ = model(ith_input, h0, c0)
-#     ith_predicted = ith_predicted.cpu()
-#     ith_predicted = ith_predicted.detach().numpy().reshape(prediction_steps, features)
-#     # Get last predicted data point
-#     ith_predicted = ith_predicted[-1, :]
-#     # Concatenate the ith predicted data point to the sampled input
-#     predicted_output = np.concatenate((predicted_output, ith_predicted.reshape(1, -1)), axis=0)
-
 input_2 = ground_truth[:seq_length] # Use the first seq_length data points
 input_2_tensor = torch.tensor(input_2, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
 predicted, _, _ = model(input_2_tensor, h0, c0)
@@ -585,39 +547,6 @@ for i in range(features):
     
 plt.suptitle(f'{stock}_{period} (Future Data)')
 plt.savefig(f"./output/{stock}_{period}_{current_date}_future_data.png")
-
-# # Plot the last seq_length + prediction_steps data points
-# ground_truth = data_full[-(seq_length+prediction_steps):]
-# # ground_truth = data_full[-(seq_length+2*prediction_steps):]
-# # Take subset of ground_truth to act as input
-# sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
-    
-
-# sampled_input = torch.tensor(sampled_input, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
-# # Predict the next 10 days
-# # model.eval()
-
-# predicted_future, _, _ = model(sampled_input, h0, c0)
-# predicted_future = predicted_future.cpu()
-# predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, features)
-# # Concatenate the input and predicted data
-# predicted_future = np.concatenate((sampled_input[0].cpu().numpy(), predicted_future), axis=0)
-
-# # Check if the predicted future data is the same shape as the ground truth
-# print(f'Predicted future data shape: {predicted_future.shape}')
-# print(f'Ground truth shape: {ground_truth.shape}')
-
-# # Plot ground truth and predicted future data
-# plt.figure(figsize=(15, 10 * features))
-# for i in range(features):
-#     plt.subplot(features, 1, i + 1)
-#     plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
-#     plt.plot(np.arange(len(predicted_future)), predicted_future[:, i], label='Predicted Future', color='red', linestyle='--')
-#     plt.title(f'Predicted Future Data for Feature {i+1}')
-#     plt.xlabel('Time Step')
-#     plt.ylabel(data_frame.columns[i])
-#     plt.legend()
-
 torch.cuda.empty_cache()
 plt.show()
 
