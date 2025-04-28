@@ -478,25 +478,25 @@ torch.save(model.state_dict(), f'./output/{stock}_{period}_{current_date}_model.
 
 # Plot the predictions for training data
 model.eval()
-predicted, _, _ = model(trainX, h0, c0)
+# predicted, _, _ = model(trainX, h0, c0)
 
-original = y  # Use the target data directly, which has the correct shape
-time_steps = np.arange(len(original))  # One time step per sequence
+# original = y  # Use the target data directly, which has the correct shape
+# time_steps = np.arange(len(original))  # One time step per sequence
 
-predicted = predicted.cpu()
+# predicted = predicted.cpu()
 
-plot_predictions(original, predicted, time_steps, data_frame, f'{stock}_{period}_{current_date}_(Training)')
+# plot_predictions(original, predicted, time_steps, data_frame, f'{stock}_{period}_{current_date}_(Training)')
 
-# Plot the predictions for validation data
-h0, c0 = None, None  # Reset hidden and cell states for validation
-predicted_val, _, _ = model(valX, h0, c0)
+# # Plot the predictions for validation data
+# h0, c0 = None, None  # Reset hidden and cell states for validation
+# predicted_val, _, _ = model(valX, h0, c0)
 
-original_val = y_val  # Use the target data directly, which has the correct shape
-time_steps_val = np.arange(len(original_val))  # One time step per sequence
+# original_val = y_val  # Use the target data directly, which has the correct shape
+# time_steps_val = np.arange(len(original_val))  # One time step per sequence
 
-predicted_val = predicted_val.cpu()
+# predicted_val = predicted_val.cpu()
 
-plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{stock}_{period}_{current_date}_(Validation)')
+# plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{stock}_{period}_{current_date}_(Validation)')
 
 # Plot the last seq_length + prediction_steps data points
 ground_truth = data_test[-(seq_length+prediction_steps):]
