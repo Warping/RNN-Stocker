@@ -170,7 +170,7 @@ for i in range(features):
 # Apply gaussian filter to smooth data
 # Apply rolling mean to smooth data
 cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
-cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
+# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
 # data_frame = binary_data_frame
 data_frame = cont_data_frame
