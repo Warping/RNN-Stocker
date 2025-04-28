@@ -148,15 +148,15 @@ else:
 features = len(cont_data_frame.columns)
 
 # Normalize every avg_period day period to avg_period day average
-print(f'Normalizing every {avg_period} day period to {avg_period} day average')
-for i in range(0, len(cont_data_frame), avg_period):
-    if i + avg_period > len(cont_data_frame):
-        # Remove last period if it is not complete
-        print(f'Removing last period {i} to {len(cont_data_frame)}')
-        cont_data_frame = cont_data_frame.iloc[:i]
-        break
-    cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] - cont_data_frame.iloc[i:i+avg_period, :].mean()
-    cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
+# print(f'Normalizing every {avg_period} day period to {avg_period} day average')
+# for i in range(0, len(cont_data_frame), avg_period):
+#     if i + avg_period > len(cont_data_frame):
+#         # Remove last period if it is not complete
+#         print(f'Removing last period {i} to {len(cont_data_frame)}')
+#         cont_data_frame = cont_data_frame.iloc[:i]
+#         break
+#     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] - cont_data_frame.iloc[i:i+avg_period, :].mean()
+#     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
 
 print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
