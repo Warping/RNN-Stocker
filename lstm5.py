@@ -16,21 +16,21 @@ from torch.utils.data import DataLoader, TensorDataset
 torch.cuda.empty_cache()
 
 # Constants
-seq_length = 120 # Number of time steps to look back
+seq_length = 200 # Number of time steps to look back
 avg_period = 30 # Number of days to average over
-num_epochs = 10000 # Number of epochs
-batch_size = 64  # Adjust this value based on your GPU memory capacity
+num_epochs = 100000 # Number of epochs
+batch_size = 4096  # Adjust this value based on your GPU memory capacity
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
-learning_rate = 0.00005 # Learning rate
-training_size = 0.85  # Percentage of data to use for training
+learning_rate = 0.0005 # Learning rate
+training_size = 0.80  # Percentage of data to use for training
 validation_size = 0.10  # Percentage of data to use for validation
-test_size = 0.05  # Percentage of data to use for testing
+test_size = 0.10  # Percentage of data to use for testing
 prediction_steps = 20  # Number of steps to predict ahead
-prediction_smoothing = 3  # Number of steps to smooth the prediction
+prediction_smoothing = 20  # Number of steps to smooth the prediction
 
 # Early stopping
-patience = 100
+patience = 200
 delta = 0.0
 verbose = False
 
@@ -147,6 +147,11 @@ else:
 # cont_data_frame = cont_data_frame.drop(columns=drop_columns)
 features = len(cont_data_frame.columns)
 
+# Apply gaussian filter to smooth data
+# Apply rolling mean to smooth data
+cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
+# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
+
 # Normalize every avg_period day period to avg_period day average
 print(f'Normalizing every {avg_period} day period to {avg_period} day average')
 for i in range(0, len(cont_data_frame), avg_period):
@@ -167,10 +172,6 @@ for i in range(features):
     #     continue
     cont_data_frame.iloc[:, i] = (cont_data_frame.iloc[:, i] - cont_data_frame.iloc[:, i].min()) / (cont_data_frame.iloc[:, i].max() - cont_data_frame.iloc[:, i].min())
 
-# Apply gaussian filter to smooth data
-# Apply rolling mean to smooth data
-cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
-# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
 # data_frame = binary_data_frame
 data_frame = cont_data_frame
