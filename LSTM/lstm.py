@@ -77,7 +77,7 @@ class MultiLayerLSTMModel(nn.Module):
         return model
     
 class DataSetGenerator:
-    def __init__():
+    def __init__(self):
         pass
 
     def generate_data(self, data_frame, batch_size, training_size, validation_size, seq_length, prediction_steps, device):
