@@ -103,7 +103,7 @@ for epoch in range(arg_vals.num_epochs):
     print(f"Total time: {time.time() - start_time:.2f} seconds")
     last_time = time.time()
     # Early stopping
-    model.early_stopper(val_loss, model, epoch)
+    model.early_stopper(val_loss, epoch)
     if model.early_stop:
         print("Early stopping")
         break
