@@ -9,26 +9,29 @@ import time
 import pandas as pd
 import io
 import argparse
-# from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter
 from datetime import datetime
+from torch.utils.data import DataLoader, TensorDataset
+
 torch.cuda.empty_cache()
 
 # Constants
-seq_length = 100 # Number of time steps to look back
-avg_period = 20 # Number of days to average over
+seq_length = 200 # Number of time steps to look back
+avg_period = 30 # Number of days to average over
 num_epochs = 100000 # Number of epochs
+batch_size = 4096  # Adjust this value based on your GPU memory capacity
 hidden_dim = 500 # Number of hidden neurons
 layer_dim = 2 # Number of hidden layers
 learning_rate = 0.0005 # Learning rate
-training_size = 0.85  # Percentage of data to use for training
+training_size = 0.80  # Percentage of data to use for training
 validation_size = 0.10  # Percentage of data to use for validation
-test_size = 0.05  # Percentage of data to use for testing
-prediction_steps = 30  # Number of steps to predict ahead
-prediction_smoothing = 3  # Number of steps to smooth the prediction
+test_size = 0.10  # Percentage of data to use for testing
+prediction_steps = 20  # Number of steps to predict ahead
+prediction_smoothing = 20  # Number of steps to smooth the prediction
 
 # Early stopping
 patience = 200
-delta = 0.00001
+delta = 0.0
 verbose = False
 
 # Stock data
@@ -45,6 +48,7 @@ parser = argparse.ArgumentParser(description='LSTM Stock Price Prediction')
 parser.add_argument('--seq_length', type=int, default=seq_length, help=f'Number of time steps to look back -- Default= {seq_length}')
 parser.add_argument('--avg_period', type=int, default=avg_period, help=f'Number of days to normalize and average over -- Default= {avg_period}')
 parser.add_argument('--num_epochs', type=int, default=num_epochs, help=f'Number of epochs -- Default= {num_epochs}')
+parser.add_argument('--batch_size', type=int, default=batch_size, help=f'Batch size -- Default= {batch_size}')
 parser.add_argument('--hidden_dim', type=int, default=hidden_dim, help=f'Number of hidden neurons -- Default= {hidden_dim}')
 parser.add_argument('--layer_dim', type=int, default=layer_dim, help=f'Number of hidden layers -- Default= {layer_dim}')
 parser.add_argument('--learning_rate', type=float, default=learning_rate, help=f'Learning rate -- Default= {learning_rate}')
@@ -81,6 +85,7 @@ prediction_smoothing = args.prediction_smoothing
 drop_columns = args.drop_columns
 verbose = args.verbose
 smoothing_window = args.smoothing_window
+batch_size = args.batch_size
 # Convert drop_columns to a list if it's a string
 if isinstance(drop_columns, str):
     drop_columns = drop_columns.strip('[ ]').split(',')
@@ -91,6 +96,7 @@ print(f'Average Period: {avg_period}')
 print(f'Prediction Steps: {prediction_steps}')
 print(f'Prediction Smoothing: {prediction_smoothing}')
 print(f'Number of Epochs: {num_epochs}')
+print(f'Batch Size: {batch_size}')
 print(f'Hidden Dimension: {hidden_dim}')
 print(f'Layer Dimension: {layer_dim}')
 print(f'Learning Rate: {learning_rate}')
@@ -141,6 +147,11 @@ else:
 # cont_data_frame = cont_data_frame.drop(columns=drop_columns)
 features = len(cont_data_frame.columns)
 
+# Apply gaussian filter to smooth data
+# Apply rolling mean to smooth data
+cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
+# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
+
 # Normalize every avg_period day period to avg_period day average
 print(f'Normalizing every {avg_period} day period to {avg_period} day average')
 for i in range(0, len(cont_data_frame), avg_period):
@@ -151,7 +162,6 @@ for i in range(0, len(cont_data_frame), avg_period):
         break
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] - cont_data_frame.iloc[i:i+avg_period, :].mean()
     cont_data_frame.iloc[i:i+avg_period, :] = cont_data_frame.iloc[i:i+avg_period, :] / cont_data_frame.iloc[i:i+avg_period, :].std()
-    # cont_data_frame.iloc[i:i+30, :] = cont_data_frame.iloc[i:i+30, :] / cont_data_frame.iloc[i:i+30, :].std()
 
 print(f'Normalizing {stock}_{period}_data_frame')
 for i in range(features):
@@ -162,30 +172,12 @@ for i in range(features):
     #     continue
     cont_data_frame.iloc[:, i] = (cont_data_frame.iloc[:, i] - cont_data_frame.iloc[:, i].min()) / (cont_data_frame.iloc[:, i].max() - cont_data_frame.iloc[:, i].min())
 
-# Apply gaussian filter to smooth data
-# Apply rolling mean to smooth data
-
-cont_data_frame = cont_data_frame.rolling(window=smoothing_window, min_periods=1).mean()
-# cont_data_frame = cont_data_frame.apply(lambda x: gaussian_filter(x, sigma=2), axis=0)
 
 # data_frame = binary_data_frame
 data_frame = cont_data_frame
     
 data_frame.to_csv(f'data/{stock}_{period}_data_frame_normalized.csv', index=False)
 print(f'Saved Normalized {stock}_{period}_ data to file')
-
-# Plot data_frame['VAL'] for len(data_frame) days
-# plt.figure(figsize=(12, 6))
-# plt.plot(data_frame['VAL'])
-# plt.title(f'{stock} Stock Price')
-# plt.xlabel('Time Step')
-# plt.ylabel('Price')
-# plt.show()
-
-# def data_grabber(time_step_index, feauture_index):
-#     # return np.sin(time_step_index*(feauture_index + 1)) # This is a dummy function. Replace this with your data grabber function
-#     # return feauture_index
-#     return data_frame.iloc[time_step_index, feauture_index]
 
 if torch.cuda.is_available():
     device = torch.device('cuda')
@@ -246,32 +238,27 @@ def plot_predictions(original, predicted, time_steps, data_frame, title):
     plt.suptitle(title)
     plt.savefig("./output/" + title + ".png")
 
-# Generate synthetic data
-# t is a list of indices from 0 to len(data_frame)
+# Generate train data
 t_full = np.linspace(0, len(data_frame), len(data_frame), endpoint=False, dtype=int)
 train_upper_bound = int(training_size*len(t_full))
 val_upper_bound = int((training_size + validation_size)*len(t_full))
 t_train = t_full[:train_upper_bound]
-# data = np.array([fromiter(t_train, i) for i in range(features)]).T  # Generate 10 input features
 data_full = data_frame.to_numpy()
-# Slice data into training and validation data
 data = data_full[:train_upper_bound]
 
 X, y = create_sequences(data, seq_length, prediction_steps)
 trainX = torch.tensor(X, dtype=torch.float32)
 trainY = torch.tensor(y, dtype=torch.float32)
 
-# Generate synthetic validation data
-# t_val = t_full[-100:]  # Use 100 data points for validation
+# Generate validation data
 t_val = t_full[train_upper_bound:val_upper_bound]
-# data_val = np.array([fromiter(t_val, i) for i in range(features)]).T  # Generate 10 input features
 data_val = data_full[train_upper_bound:val_upper_bound]
 
 X_val, y_val = create_sequences(data_val, seq_length, prediction_steps)
 valX = torch.tensor(X_val, dtype=torch.float32)
 valY = torch.tensor(y_val, dtype=torch.float32)
 
-# Generate synthetic test data
+# Generate test data
 t_test = t_full[val_upper_bound:]  # Use 100 data points for testing
 data_test = data_full[val_upper_bound:]
 X_test, y_test = create_sequences(data_test, seq_length, prediction_steps)
@@ -284,21 +271,31 @@ print(f'Test data shape: {testX.shape}, {testY.shape}')
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, prediction_steps):
         super(LSTMModel, self).__init__()
         self.hidden_dim = hidden_dim
         self.layer_dim = layer_dim
+        self.prediction_steps = prediction_steps
+
+        # LSTM layer
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, output_dim)
+
+        # Fully connected layer
+        self.fc = nn.Linear(hidden_dim, output_dim * prediction_steps)
 
     def forward(self, x, h0=None, c0=None):
+        # Dynamically initialize hidden states if not provided
         if h0 is None or c0 is None:
-            h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).to(x.device)
-            c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).to(x.device)
-        
+            batch_size = x.size(0)  # Get the batch size from the input
+            h0 = torch.zeros(self.layer_dim, batch_size, self.hidden_dim).to(x.device)
+            c0 = torch.zeros(self.layer_dim, batch_size, self.hidden_dim).to(x.device)
+
+        # Forward propagate through LSTM
         out, (hn, cn) = self.lstm(x, (h0, c0))
+
+        # Fully connected layer
         out = self.fc(out[:, -1, :])  # Output for the last time step
-        out = out.view(out.size(0), -1, features)  # Reshape to (batch_size, prediction_steps, features)
+        out = out.view(out.size(0), self.prediction_steps, -1)  # Reshape to match target shape
         return out, hn, cn
 
 class EarlyStopping:
@@ -344,23 +341,21 @@ class EarlyStopping:
         else:
             # No significant improvement
             self.counter += 1
-            if self.counter % 10 == 0:
-                self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
 
     def save_checkpoint(self, val_loss, model, epoch):
         '''Saves model when validation loss decreases.'''
-        if self.verbose:
-            self.trace_func(f'Epoch: {epoch} - Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+        self.trace_func(f'Epoch: {epoch+1} - Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.model_buffer)
         self.model_buffer.seek(0)
         self.val_loss_min = val_loss
 
     def get_model(self):
         # Use the correct output_dim for multi-step predictions
-        output_dim = features * prediction_steps  # Ensure this matches the model used during training
-        model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=output_dim)
+        output_dim = features  # Ensure this matches the model used during training
+        model = LSTMModel(input_dim=features, hidden_dim=hidden_dim, layer_dim=layer_dim, output_dim=output_dim, prediction_steps=prediction_steps)
         model.load_state_dict(torch.load(self.model_buffer))
         return model
     
@@ -369,57 +364,86 @@ model = LSTMModel(
     input_dim=features,
     hidden_dim=hidden_dim,
     layer_dim=layer_dim,
-    output_dim=features * prediction_steps
+    output_dim=features,
+    prediction_steps=prediction_steps
 )
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 early_stopper = EarlyStopping(patience=patience, verbose=verbose, delta=delta)
-
 h0, c0 = None, None
 
 start_time = time.time()
 last_time = start_time
 current_time = time.time()
 
+# Create DataLoader for training, validation, and test datasets
+trainX, trainY = trainX.to(device), trainY.to(device)
+valX, valY = valX.to(device), valY.to(device)
+testX, testY = testX.to(device), testY.to(device)
+trainGen = torch.Generator(device=device)
+valGen = torch.Generator(device=device)
+testGen = torch.Generator(device=device)
+train_dataset = TensorDataset(trainX, trainY)
+val_dataset = TensorDataset(valX, valY)
+test_dataset = TensorDataset(testX, testY)
 
-# Training loop
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, generator=trainGen)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, generator=valGen)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, generator=testGen)
+
+# Training loop with batches
 for epoch in range(num_epochs):
     model.train()
-    optimizer.zero_grad()
+    train_loss = 0.0
+    val_loss = 0.0
+    test_loss = 0.0
 
-    outputs, h0, c0 = model(trainX, h0, c0)
+    for batch_X, batch_Y in train_loader:
+        batch_X, batch_Y = batch_X.to(device), batch_Y.to(device)  # Move batch to device
+        optimizer.zero_grad()
 
-    # Calculate loss for multi-step predictions
-    loss = criterion(outputs, trainY)  # trainY now contains 10 steps
-    loss.backward()
-    optimizer.step()
+        # Forward pass
+        outputs, _, _ = model(batch_X)
 
-    h0 = h0.detach()
-    c0 = c0.detach()
-    
-    # Get validation loss
+        # Reshape batch_Y if necessary
+        batch_Y = batch_Y.view(batch_Y.size(0), prediction_steps, -1)
+
+        # Calculate loss
+        loss = criterion(outputs, batch_Y)
+        loss.backward()
+        optimizer.step()
+
+        train_loss += loss.item()
+
+    # Validation loop (similar to training loop)
+    val_loss = 0.0
     with torch.no_grad():
         model.eval()
-        h0_val, c0_val = None, None  # Reset hidden and cell states for validation
-        predicted, _, _ = model(valX, h0_val, c0_val)
-        val_loss = criterion(predicted, valY)  # valY also contains 10 steps
-        val_loss_float = val_loss.item()
-        
-        h0_test, c0_test = None, None  # Reset hidden and cell states for test
-        predicted_test, _, _ = model(testX, h0_test, c0_test)
-        test_loss = criterion(predicted_test, testY)  # testY also contains 10 steps
-        test_loss_float = test_loss.item()
+        for batch_X, batch_Y in val_loader:
+            batch_X, batch_Y = batch_X.to(device), batch_Y.to(device)
+            predicted, _, _ = model(batch_X)
+            val_loss += criterion(predicted, batch_Y).item()
 
-# print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}')
-    early_stopper(val_loss_float, model, epoch)
-    if (epoch+1) % 10 == 0:
-        current_time = time.time()
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss_float:.4f}, Test Loss: {test_loss_float:.4f}')
-        print(f'Time: {current_time - last_time:.2f} seconds')
-        start_time = last_time
+        for batch_X, batch_Y in test_loader:
+            batch_X, batch_Y = batch_X.to(device), batch_Y.to(device)
+            predicted, _, _ = model(batch_X, None, None)
+            test_loss += criterion(predicted, batch_Y).item()
+            
+    # Average losses
+    train_loss /= len(train_loader)
+    val_loss /= len(val_loader)
+    test_loss /= len(test_loader)
+
+    # Print progress
+    print(f"Epoch [{epoch+1}/{num_epochs}]\nTrain Loss: \t{train_loss:.7f}\nVal Loss: \t{val_loss:.7f}\nTest Loss: \t{test_loss:.7f}")
+    print(f"Epoch Time: {time.time() - last_time:.2f} seconds")
+    print(f"Total time: {time.time() - start_time:.2f} seconds")
+    last_time = time.time()
+    # Early stopping
+    early_stopper(val_loss, model, epoch)
     if early_stopper.early_stop:
-        print('Early stopping')
+        print("Early stopping")
         break
 
 
@@ -434,45 +458,28 @@ torch.save(model.state_dict(), f'./output/{stock}_{period}_{current_date}_model.
 
 # Plot the predictions for training data
 model.eval()
-predicted, _, _ = model(trainX, h0, c0)
+# predicted, _, _ = model(trainX, h0, c0)
 
-original = y  # Use the target data directly, which has the correct shape
-time_steps = np.arange(len(original))  # One time step per sequence
+# original = y  # Use the target data directly, which has the correct shape
+# time_steps = np.arange(len(original))  # One time step per sequence
 
-predicted = predicted.cpu()
+# predicted = predicted.cpu()
 
-plot_predictions(original, predicted, time_steps, data_frame, f'{stock}_{period}_{current_date}_(Training)')
+# plot_predictions(original, predicted, time_steps, data_frame, f'{stock}_{period}_{current_date}_(Training)')
 
-# Plot the predictions for validation data
-h0, c0 = None, None  # Reset hidden and cell states for validation
-predicted_val, _, _ = model(valX, h0, c0)
+# # Plot the predictions for validation data
+# h0, c0 = None, None  # Reset hidden and cell states for validation
+# predicted_val, _, _ = model(valX, h0, c0)
 
-original_val = y_val  # Use the target data directly, which has the correct shape
-time_steps_val = np.arange(len(original_val))  # One time step per sequence
+# original_val = y_val  # Use the target data directly, which has the correct shape
+# time_steps_val = np.arange(len(original_val))  # One time step per sequence
 
-predicted_val = predicted_val.cpu()
+# predicted_val = predicted_val.cpu()
 
-plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{stock}_{period}_{current_date}_(Validation)')
+# plot_predictions(original_val, predicted_val, time_steps_val, data_frame, f'{stock}_{period}_{current_date}_(Validation)')
 
 # Plot the last seq_length + prediction_steps data points
 ground_truth = data_test[-(seq_length+prediction_steps):]
-
-# ground_truth = data_full[-(seq_length+2*prediction_steps):]
-# Take subset of ground_truth to act as input
-# sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
-# predicted_output = ground_truth[:seq_length+prediction_steps] # Use the first seq_length data points
-# predicted_output_2 = ground_truth[:seq_length+prediction_steps] # Use the first seq_length data points
-# for i in range(prediction_steps):
-#     ith_input = ground_truth[i:i+seq_length]
-#     ith_input = torch.tensor(ith_input, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
-#     ith_predicted, _, _ = model(ith_input, h0, c0)
-#     ith_predicted = ith_predicted.cpu()
-#     ith_predicted = ith_predicted.detach().numpy().reshape(prediction_steps, features)
-#     # Get last predicted data point
-#     ith_predicted = ith_predicted[-1, :]
-#     # Concatenate the ith predicted data point to the sampled input
-#     predicted_output = np.concatenate((predicted_output, ith_predicted.reshape(1, -1)), axis=0)
-
 input_2 = ground_truth[:seq_length] # Use the first seq_length data points
 input_2_tensor = torch.tensor(input_2, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
 predicted, _, _ = model(input_2_tensor, h0, c0)
@@ -541,39 +548,6 @@ for i in range(features):
     
 plt.suptitle(f'{stock}_{period} (Future Data)')
 plt.savefig(f"./output/{stock}_{period}_{current_date}_future_data.png")
-
-# # Plot the last seq_length + prediction_steps data points
-# ground_truth = data_full[-(seq_length+prediction_steps):]
-# # ground_truth = data_full[-(seq_length+2*prediction_steps):]
-# # Take subset of ground_truth to act as input
-# sampled_input = ground_truth[:seq_length] # Use the first seq_length data points
-    
-
-# sampled_input = torch.tensor(sampled_input, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
-# # Predict the next 10 days
-# # model.eval()
-
-# predicted_future, _, _ = model(sampled_input, h0, c0)
-# predicted_future = predicted_future.cpu()
-# predicted_future = predicted_future.detach().numpy().reshape(prediction_steps, features)
-# # Concatenate the input and predicted data
-# predicted_future = np.concatenate((sampled_input[0].cpu().numpy(), predicted_future), axis=0)
-
-# # Check if the predicted future data is the same shape as the ground truth
-# print(f'Predicted future data shape: {predicted_future.shape}')
-# print(f'Ground truth shape: {ground_truth.shape}')
-
-# # Plot ground truth and predicted future data
-# plt.figure(figsize=(15, 10 * features))
-# for i in range(features):
-#     plt.subplot(features, 1, i + 1)
-#     plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
-#     plt.plot(np.arange(len(predicted_future)), predicted_future[:, i], label='Predicted Future', color='red', linestyle='--')
-#     plt.title(f'Predicted Future Data for Feature {i+1}')
-#     plt.xlabel('Time Step')
-#     plt.ylabel(data_frame.columns[i])
-#     plt.legend()
-
 torch.cuda.empty_cache()
 plt.show()
 
