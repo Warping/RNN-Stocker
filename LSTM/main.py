@@ -124,7 +124,7 @@ prediction_steps = arg_vals.prediction_steps
 features = data_proc.features
 prediction_smoothing = arg_vals.prediction_smoothing
 data_test = dsg.data_test
-data_full = data_proc.cont_data_frame.to_numpy()
+
 
 ground_truth = data_test[-(seq_length+prediction_steps):]
 input_2 = ground_truth[:seq_length] # Use the first seq_length data points
@@ -133,7 +133,7 @@ predicted, _, _ = model(input_2_tensor, h0, c0)
 predicted = predicted.cpu()
 predicted = predicted.detach().numpy().reshape(prediction_steps, features)
 # Smooth the predicted data by finding a smooth curve through the points
-predicted_smooth = pd.DataFrame(predicted, columns=data_full.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
+predicted_smooth = pd.DataFrame(predicted, columns=data_proc.cont_data_frame.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
 
 
 future_data = data_test[-(seq_length):]
@@ -143,7 +143,7 @@ future_predicted, _, _ = model(future_data_tensor, h0, c0)
 future_predicted = future_predicted.cpu()
 future_predicted = future_predicted.detach().numpy().reshape(prediction_steps, features)
 # Smooth the predicted data by finding a smooth curve through the points
-future_predicted_smooth = pd.DataFrame(future_predicted, columns=data_full.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
+future_predicted_smooth = pd.DataFrame(future_predicted, columns=data_proc.cont_data_frame.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
 
 
 # Apply Gaussian filter for additional smoothing
@@ -173,7 +173,7 @@ for i in range(features):
     plt.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], label='Predicted Output Smoothed', color='red', linestyle='--')
     plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
     plt.xlabel('Time Step')
-    plt.ylabel(data_full.columns[i])
+    plt.ylabel(data_proc.cont_data_frame.columns[i])
     plt.legend()
 
 plt.suptitle(f'{arg_vals.stock}_{arg_vals.period} (Predicted Future)')
@@ -190,7 +190,7 @@ for i in range(features):
     plt.plot(np.arange(len(future_data_smooth)), future_data_smooth[:, i], label='Future Data Smoothed', color='red', linestyle='--')
     plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
     plt.xlabel('Time Step')
-    plt.ylabel(data_full.columns[i])
+    plt.ylabel(data_proc.cont_data_frame.columns[i])
     plt.legend()
     
 plt.suptitle(f'{arg_vals.stock}_{arg_vals.period} (Future Data)')
