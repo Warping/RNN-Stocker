@@ -115,7 +115,7 @@ model = model.get_model()
 
 print(f'Saving model to file...')
 current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-torch.save(model.state_dict(), f'./output/{arg_vals.stock}_{arg_vals.period}_{current_date}_model.pth')
+torch.save(model.state_dict(), f'../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_model.pth')
 
 # Plot the predictions for training data
 model.eval()
@@ -176,7 +176,7 @@ for i in range(features):
     plt.legend()
 
 plt.suptitle(f'{arg_vals.stock}_{arg_vals.period} (Predicted Future)')
-plt.savefig(f"./output/{arg_vals.stock}_{arg_vals.period}_{current_date}_predicted_future.png")
+plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_predicted_future.png")
 
 # # Plot the future data and predicted future data
 
@@ -193,7 +193,7 @@ for i in range(features):
     plt.legend()
     
 plt.suptitle(f'{arg_vals.stock}_{arg_vals.period} (Future Data)')
-plt.savefig(f"./output/{arg_vals.stock}_{arg_vals.period}_{current_date}_future_data.png")
+plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_future_data.png")
 torch.cuda.empty_cache()
 plt.show()
 
