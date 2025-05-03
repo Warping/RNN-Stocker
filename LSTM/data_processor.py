@@ -31,6 +31,8 @@ class DataProcessor:
         self.binary_data_frame = binary_data_frame
         
     def drop_columns(self, drop_columns):
+        if isinstance(drop_columns, str):
+            drop_columns = drop_columns.strip('[ ]').split(',')
         if drop_columns != []:
             print(f'Dropping columns: {drop_columns}')
             # Drop columns from both data frames
