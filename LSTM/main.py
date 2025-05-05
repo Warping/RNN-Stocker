@@ -8,6 +8,10 @@ import time
 from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
 
 arg_vals = arg_parser.ArgParser()
 data_proc = dp.DataProcessor()
@@ -117,6 +121,19 @@ print(f'Saving model to file...')
 current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 torch.save(model.state_dict(), f'../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_model.pth')
 
+def calculate_f1_score(y_true, y_pred):
+    # Flatten the arrays to 1D
+    y_true_flat = y_true.flatten()
+    y_pred_flat = y_pred.flatten()
+    
+    # Calculate F1 score
+    f1 = f1_score(y_true_flat, y_pred_flat, average='weighted')
+    accuracy = accuracy_score(y_true_flat, y_pred_flat)
+    precision = precision_score(y_true_flat, y_pred_flat, average='weighted')
+    recall = recall_score(y_true_flat, y_pred_flat, average='weighted')
+    
+    return f1, accuracy, precision, recall
+
 # Plot the predictions for training data
 model.eval()
 seq_length = arg_vals.seq_length
@@ -161,6 +178,14 @@ print(f'Predicted shape: {predicted_output.shape}')
 print(f'Predicted Smooth shape: {predicted_output_smooth.shape}')
 print(f'Future Data shape: {future_data.shape}')
 print(f'Future Data Smooth shape: {future_data_smooth.shape}')
+
+y_true = ground_truth[seq_length:]
+y_pred = predicted_output[seq_length:]
+f1, accuracy, precision, recall = calculate_f1_score(y_true, y_pred)
+print(f"F1 Score: {f1:.4f}")
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
 
 
 # Plot the sampled input and predicted future data
