@@ -121,18 +121,21 @@ print(f'Saving model to file...')
 current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 torch.save(model.state_dict(), f'../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_model.pth')
 
-def calculate_f1_score(y_true, y_pred):
+def calculate_metrics(y_true, y_pred):
+    """Calculate regression metrics for model evaluation"""
+    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+    
     # Flatten the arrays to 1D
     y_true_flat = y_true.flatten()
     y_pred_flat = y_pred.flatten()
     
-    # Calculate F1 score
-    f1 = f1_score(y_true_flat, y_pred_flat, average='weighted')
-    accuracy = accuracy_score(y_true_flat, y_pred_flat)
-    precision = precision_score(y_true_flat, y_pred_flat, average='weighted')
-    recall = recall_score(y_true_flat, y_pred_flat, average='weighted')
+    # Calculate regression metrics
+    mse = mean_squared_error(y_true_flat, y_pred_flat)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true_flat, y_pred_flat)
+    r2 = r2_score(y_true_flat, y_pred_flat)
     
-    return f1, accuracy, precision, recall
+    return mse, rmse, mae, r2
 
 # Plot the predictions for training data
 model.eval()
@@ -181,11 +184,11 @@ print(f'Future Data Smooth shape: {future_data_smooth.shape}')
 
 y_true = ground_truth[seq_length:]
 y_pred = predicted_output[seq_length:]
-f1, accuracy, precision, recall = calculate_f1_score(y_true, y_pred)
-print(f"F1 Score: {f1:.4f}")
-print(f"Accuracy: {accuracy:.4f}")
-print(f"Precision: {precision:.4f}")
-print(f"Recall: {recall:.4f}")
+mse, rmse, mae, r2 = calculate_metrics(y_true, y_pred)
+print(f"Mean Squared Error: {mse:.4f}")
+print(f"Root Mean Squared Error: {rmse:.4f}")
+print(f"Mean Absolute Error: {mae:.4f}")
+print(f"R² Score: {r2:.4f}")
 
 
 # Plot the sampled input and predicted future data
