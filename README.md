@@ -27,7 +27,9 @@ Requires CUDA Toolkit (12.4 or 12.8)</p><h5>Steps</h5><ul>
 </ul><ul>
 <li>pip install --pre torch torchaudio torchvision --index-url https://download.pytorch.org/whl/nightly/cu128</li>
 </ul><ul>
-<li>python.exe .\lstm3.py</li>
+<li>cd LSTM
+</ul><ul>
+<li>python.exe .\lstm.py</li>
 </ul><h2>Usage</h2>
 <hr><p>Can modify hyperparameters, early stopping rules, stock data preprocessing</p><h2>Project Status</h2>
 <hr><p>Currently in progress: ETA - May 1st 2025</p><h2>Improvements</h2>
