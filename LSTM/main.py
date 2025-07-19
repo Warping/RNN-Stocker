@@ -8,6 +8,82 @@ import time
 from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import os
+
+# Set up improved visualization styles
+plt.style.use('ggplot')
+plt.rcParams['figure.figsize'] = (15, 12)
+plt.rcParams['font.size'] = 12
+plt.rcParams['axes.labelsize'] = 14
+plt.rcParams['axes.titlesize'] = 16
+plt.rcParams['xtick.labelsize'] = 12
+plt.rcParams['ytick.labelsize'] = 12
+plt.rcParams['legend.fontsize'] = 12
+plt.rcParams['figure.titlesize'] = 20
+
+# Function to set up professional-looking plots
+def setup_plot_style(ax, title, xlabel, ylabel, feature_name):
+    # ax.set_title(title, fontsize=16, fontweight='bold')
+    ax.set_xlabel(xlabel, fontsize=24)
+    ax.set_ylabel(ylabel, fontsize=24)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Add a light gray background to highlight the plot area
+    ax.set_facecolor('#f5f5f5')
+    
+    # Return the axis for further customization
+    return ax
+
+# Function to save individual feature plots as EPS files
+def save_feature_as_eps(ax, feature_name, stock, period, current_date, plot_type):
+    # Create output directory if it doesn't exist
+    output_dir = os.path.join('..', 'output', 'eps_plots')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Save as EPS file
+    fig = plt.figure(figsize=(10, 6))
+    new_ax = fig.add_subplot(111)
+    
+    # Copy the content from the original axis
+    for line in ax.lines:
+        new_ax.plot(line.get_xdata(), line.get_ydata(), 
+                   color=line.get_color(), 
+                   linestyle=line.get_linestyle(),
+                   linewidth=line.get_linewidth(),
+                   label=line.get_label())
+    
+    # Copy styling
+    setup_plot_style(new_ax, 
+                    f'{feature_name} - {plot_type}', 
+                    'Time Steps', 
+                    feature_name,
+                    feature_name)
+    
+    # Add vertical line and annotation at prediction start
+    if hasattr(ax, 'prediction_start'):
+        seq_length = ax.prediction_start
+        new_ax.axvline(x=seq_length, color='red', linestyle='-', alpha=0.7, linewidth=2)
+        new_ax.text(seq_length, new_ax.get_ylim()[0] + 0.05 * (new_ax.get_ylim()[1] - new_ax.get_ylim()[0]), 
+                'Prediction Start', fontsize=12, color='red', rotation=90, 
+                verticalalignment='bottom', horizontalalignment='right',
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+        
+        # Add shaded area for prediction region
+        new_ax.axvspan(seq_length, ax.get_xlim()[1], alpha=0.1, color='red')
+    
+    # Enhance legend
+    new_ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+    
+    # Save the figure
+    filename = f"{stock}_{period}_{current_date}_{feature_name}_{plot_type}.eps"
+    filepath = os.path.join(output_dir, filename)
+    fig.savefig(filepath, format='eps', dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    
+    return filepath
 
 arg_vals = arg_parser.ArgParser()
 data_proc = dp.DataProcessor()
@@ -133,15 +209,15 @@ def calculate_metrics(y_true, y_pred):
     
     return mse, rmse, mae, r2
 
-def setup_plot_style(ax, title, xlabel, ylabel, legend_label):
-    """Setup the plot style for each subplot"""
-    ax.set_title(title, fontsize=16, fontweight='bold')
-    ax.set_xlabel(xlabel, fontsize=14)
-    ax.set_ylabel(ylabel, fontsize=14)
-    ax.grid(True, linestyle='--', alpha=0.7)
-    ax.tick_params(axis='both', which='major', labelsize=12)
-    ax.legend(loc='best', fontsize=12)
-    return ax
+# def setup_plot_style(ax, title, xlabel, ylabel, legend_label):
+#     """Setup the plot style for each subplot"""
+#     # ax.set_title(title, fontsize=16, fontweight='bold')
+#     ax.set_xlabel(xlabel, fontsize=24)
+#     ax.set_ylabel(ylabel, fontsize=24)
+#     ax.grid(True, linestyle='--', alpha=0.7)
+#     ax.tick_params(axis='both', which='major', labelsize=20)
+#     ax.legend(loc='best', fontsize=20)
+#     return ax
 
 # Plot the predictions for training data
 model.eval()
@@ -221,7 +297,7 @@ for i in range(features):
     # Add vertical line and annotation at prediction start
     ax.axvline(x=seq_length, color='red', linestyle='-', alpha=0.7, linewidth=2)
     ax.text(seq_length, ax.get_ylim()[0] + 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0]), 
-            'Prediction Start', fontsize=12, color='red', rotation=90, 
+            'Prediction Start', fontsize=18, color='red', rotation=90, 
             verticalalignment='bottom', horizontalalignment='right',
             bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
     
@@ -230,6 +306,13 @@ for i in range(features):
     
     # Enhance legend
     ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+    
+    # Store prediction start point for EPS export
+    ax.prediction_start = seq_length
+    
+    # Save individual feature as EPS
+    save_feature_as_eps(ax, feature_name, arg_vals.stock, arg_vals.period, 
+                       current_date, 'Forecast')
 
 # Add a main title with asset name and period
 plt.suptitle(f'{arg_vals.stock} ({arg_vals.period}) - Model Predictions', 
@@ -238,7 +321,7 @@ plt.suptitle(f'{arg_vals.stock} ({arg_vals.period}) - Model Predictions',
 # Add subtitle with more details
 prediction_date = datetime.now().strftime("%B %d, %Y")
 plt.figtext(0.5, 0.01, f"Prediction generated on {prediction_date} | Training Time: {total_time:.2f} seconds", 
-            ha="center", fontsize=12, bbox={"facecolor":"#f0f0f0", "alpha":0.5, "pad":5})
+            ha="center", fontsize=18, bbox={"facecolor":"#f0f0f0", "alpha":0.5, "pad":5})
 
 # Save the enhanced figure
 plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_predicted_future.png", 
@@ -277,10 +360,17 @@ for i in range(features):
             bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
     
     # Add shaded area for prediction region
-    ax.axvspan(seq_length, len(future_data), alpha=0.1, color='red')
+#     ax.axvspan(seq_length, len(future_data), alpha=0.1, color='red')
     
     # Enhance legend
     ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+    
+    # Store prediction start point for EPS export
+    ax.prediction_start = seq_length
+    
+    # Save individual feature as EPS
+    save_feature_as_eps(ax, feature_name, arg_vals.stock, arg_vals.period, 
+                       current_date, 'Future_Forecast')
 
 # Add a main title with asset name and period
 plt.suptitle(f'{arg_vals.stock} ({arg_vals.period}) - Future Forecast', 
@@ -293,6 +383,8 @@ plt.figtext(0.5, 0.01, f"Forecast generated on {prediction_date} | Looking {pred
 # Save the enhanced figure
 plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_future_data.png", 
             dpi=300, bbox_inches='tight')
+
+print(f"EPS files saved to: {os.path.join('..', 'output', 'eps_plots')}")
 
 torch.cuda.empty_cache()
 plt.show()
