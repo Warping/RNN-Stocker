@@ -8,6 +8,33 @@ import time
 from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
+# Set up improved visualization styles
+plt.style.use('ggplot')
+plt.rcParams['figure.figsize'] = (15, 12)
+plt.rcParams['font.size'] = 12
+plt.rcParams['axes.labelsize'] = 14
+plt.rcParams['axes.titlesize'] = 16
+plt.rcParams['xtick.labelsize'] = 12
+plt.rcParams['ytick.labelsize'] = 12
+plt.rcParams['legend.fontsize'] = 12
+plt.rcParams['figure.titlesize'] = 20
+
+# Function to set up professional-looking plots
+def setup_plot_style(ax, title, xlabel, ylabel, feature_name):
+    ax.set_title(title, fontsize=16, fontweight='bold')
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(ylabel, fontsize=14)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Add a light gray background to highlight the plot area
+    ax.set_facecolor('#f5f5f5')
+    
+    # Return the axis for further customization
+    return ax
 
 arg_vals = arg_parser.ArgParser()
 data_proc = dp.DataProcessor()
@@ -146,16 +173,12 @@ future_predicted = future_predicted.detach().numpy().reshape(prediction_steps, f
 future_predicted_smooth = pd.DataFrame(future_predicted, columns=data_proc.cont_data_frame.columns).rolling(window=prediction_smoothing, min_periods=1).mean().to_numpy()
 
 
-# Apply Gaussian filter for additional smoothing
-# predicted_smooth = pd.DataFrame(predicted_smooth, columns=data_frame.columns).apply(lambda x: gaussian_filter(x, sigma=2), axis=0).to_numpy()
-
 predicted_output = np.concatenate((input_2, predicted), axis=0)
 predicted_output_smooth = np.concatenate((input_2, predicted_smooth), axis=0)
 future_data = np.concatenate((future_data, future_predicted), axis=0)
 future_data_smooth = np.concatenate((future_data_smooth, future_predicted_smooth), axis=0)
 
 # Check if the sampled input is the same shape as the ground truth
-# print(f'Predicted_1 shape: {predicted_output.shape}')
 print(f'Ground truth shape: {ground_truth.shape}')
 print(f'Predicted shape: {predicted_output.shape}')
 print(f'Predicted Smooth shape: {predicted_output_smooth.shape}')
@@ -163,38 +186,107 @@ print(f'Future Data shape: {future_data.shape}')
 print(f'Future Data Smooth shape: {future_data_smooth.shape}')
 
 
-# Plot the sampled input and predicted future data
-plt.figure(figsize=(15, 10 * features))
+# Enhanced plotting for predicted output
+fig, axs = plt.subplots(features, 1, figsize=(15, 8 * features), constrained_layout=True)
+if features == 1:
+    axs = [axs]  # Make it iterable for the single feature case
+
 for i in range(features):
-    plt.subplot(features, 1, i + 1)
-    # plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output 1', color='red', linestyle='--')
-    plt.plot(np.arange(len(ground_truth)), ground_truth[:, i], label='Ground Truth', color='blue')
-    plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output', color='green', linestyle='--')
-    plt.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], label='Predicted Output Smoothed', color='red', linestyle='--')
-    plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
-    plt.xlabel('Time Step')
-    plt.ylabel(data_proc.cont_data_frame.columns[i])
-    plt.legend()
-
-plt.suptitle(f'{arg_vals.stock}_{arg_vals.period} (Predicted Future)')
-plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_predicted_future.png")
-
-# # Plot the future data and predicted future data
-
-plt.figure(figsize=(15, 10 * features))
-for i in range(features):
-    plt.subplot(features, 1, i + 1)
-    # plt.plot(np.arange(len(predicted_output)), predicted_output[:, i], label='Predicted Output 1', color='red', linestyle='--')
-    plt.plot(np.arange(len(future_data[:seq_length, i])), future_data[:seq_length, i], label='Ground Truth', color='blue')
-    plt.plot(np.arange(len(future_data)), future_data[:, i], label='Future Data', color='green', linestyle='--')
-    plt.plot(np.arange(len(future_data_smooth)), future_data_smooth[:, i], label='Future Data Smoothed', color='red', linestyle='--')
-    plt.title(f'Sampled Input and Predicted Future Data for Feature {i+1}')
-    plt.xlabel('Time Step')
-    plt.ylabel(data_proc.cont_data_frame.columns[i])
-    plt.legend()
+    feature_name = data_proc.cont_data_frame.columns[i]
+    ax = setup_plot_style(axs[i], 
+                          f'{feature_name} - Forecast', 
+                          'Time Steps', 
+                          feature_name,
+                          feature_name)
     
-plt.suptitle(f'{arg_vals.stock}_{arg_vals.period} (Future Data)')
-plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_future_data.png")
+    # Plot ground truth
+    ax.plot(np.arange(len(ground_truth)), ground_truth[:, i], 
+            label='Historical Data', color='#1f77b4', linewidth=2.5)
+    
+    # Plot predictions
+    ax.plot(np.arange(len(predicted_output)), predicted_output[:, i], 
+            label='Predicted', color='#ff7f0e', linewidth=2, linestyle='--')
+    
+    # Plot smoothed predictions
+    ax.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], 
+            label='Predicted (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
+    
+    # Add vertical line and annotation at prediction start
+    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=0.7, linewidth=2)
+    ax.text(seq_length, ax.get_ylim()[0] + 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0]), 
+            'Prediction Start', fontsize=12, color='red', rotation=90, 
+            verticalalignment='bottom', horizontalalignment='right',
+            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+    
+    # Add shaded area for prediction region
+    ax.axvspan(seq_length, len(predicted_output), alpha=0.1, color='red')
+    
+    # Enhance legend
+    ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+
+# Add a main title with asset name and period
+plt.suptitle(f'{arg_vals.stock} ({arg_vals.period}) - Model Predictions', 
+             fontsize=22, fontweight='bold', y=1.02)
+
+# Add subtitle with more details
+prediction_date = datetime.now().strftime("%B %d, %Y")
+plt.figtext(0.5, 0.01, f"Prediction generated on {prediction_date} | Training Time: {total_time:.2f} seconds", 
+            ha="center", fontsize=12, bbox={"facecolor":"#f0f0f0", "alpha":0.5, "pad":5})
+
+# Save the enhanced figure
+plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_predicted_future.png", 
+            dpi=300, bbox_inches='tight')
+
+# Enhanced plotting for future data
+fig, axs = plt.subplots(features, 1, figsize=(15, 8 * features), constrained_layout=True)
+if features == 1:
+    axs = [axs]  # Make it iterable for the single feature case
+
+for i in range(features):
+    feature_name = data_proc.cont_data_frame.columns[i]
+    ax = setup_plot_style(axs[i], 
+                         f'{feature_name} - Future Forecast', 
+                         'Time Steps', 
+                         feature_name,
+                         feature_name)
+    
+    # Plot input data
+    ax.plot(np.arange(seq_length), future_data[:seq_length, i], 
+            label='Input Data', color='#1f77b4', linewidth=2.5)
+    
+    # Plot future predictions
+    ax.plot(np.arange(seq_length, len(future_data)), future_data[seq_length:, i], 
+            label='Future Forecast', color='#ff7f0e', linewidth=2, linestyle='--')
+    
+    # Plot smoothed future predictions
+    ax.plot(np.arange(seq_length, len(future_data_smooth)), future_data_smooth[seq_length:, i], 
+            label='Future Forecast (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
+    
+    # Add vertical line and annotation at prediction start
+    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=0.7, linewidth=2)
+    ax.text(seq_length, ax.get_ylim()[0] + 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0]), 
+            'Prediction Start', fontsize=12, color='red', rotation=90, 
+            verticalalignment='bottom', horizontalalignment='right',
+            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+    
+    # Add shaded area for prediction region
+    ax.axvspan(seq_length, len(future_data), alpha=0.1, color='red')
+    
+    # Enhance legend
+    ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+
+# Add a main title with asset name and period
+plt.suptitle(f'{arg_vals.stock} ({arg_vals.period}) - Future Forecast', 
+             fontsize=22, fontweight='bold', y=1.02)
+
+# Add subtitle with more details
+plt.figtext(0.5, 0.01, f"Forecast generated on {prediction_date} | Looking {prediction_steps} steps ahead", 
+            ha="center", fontsize=12, bbox={"facecolor":"#f0f0f0", "alpha":0.5, "pad":5})
+
+# Save the enhanced figure
+plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_future_data.png", 
+            dpi=300, bbox_inches='tight')
+
 torch.cuda.empty_cache()
 plt.show()
 
