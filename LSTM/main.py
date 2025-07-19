@@ -17,22 +17,27 @@ plt.rcParams['figure.figsize'] = (15, 12)
 plt.rcParams['font.size'] = 12
 plt.rcParams['axes.labelsize'] = 14
 plt.rcParams['axes.titlesize'] = 16
-plt.rcParams['xtick.labelsize'] = 12
-plt.rcParams['ytick.labelsize'] = 12
+plt.rcParams['xtick.labelsize'] = 20  # Increased from 14 to 20
+plt.rcParams['ytick.labelsize'] = 20  # Increased from 14 to 20
 plt.rcParams['legend.fontsize'] = 12
 plt.rcParams['figure.titlesize'] = 20
+plt.rcParams['savefig.transparent'] = False  # Ensure backgrounds are not transparent
 
 # Function to set up professional-looking plots
 def setup_plot_style(ax, title, xlabel, ylabel, feature_name):
-    # ax.set_title(title, fontsize=16, fontweight='bold')
-    ax.set_xlabel(xlabel, fontsize=24)
-    ax.set_ylabel(ylabel, fontsize=24)
-    ax.grid(True, linestyle='--', alpha=0.7)
+    ax.set_title(title, fontsize=16, fontweight='bold')
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(ylabel, fontsize=14)
+    ax.grid(True, linestyle='--', alpha=1.0)  # Solid grid lines
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     
-    # Add a light gray background to highlight the plot area
+    # Add a solid light gray background to highlight the plot area
     ax.set_facecolor('#f5f5f5')
+    
+    # Increase tick label font sizes
+    ax.tick_params(axis='both', which='major', labelsize=20)  # Increased from 14 to 20
+    ax.tick_params(axis='both', which='minor', labelsize=16)  # Increased from 12 to 16
     
     # Return the axis for further customization
     return ax
@@ -65,22 +70,26 @@ def save_feature_as_eps(ax, feature_name, stock, period, current_date, plot_type
     # Add vertical line and annotation at prediction start
     if hasattr(ax, 'prediction_start'):
         seq_length = ax.prediction_start
-        new_ax.axvline(x=seq_length, color='red', linestyle='-', alpha=0.7, linewidth=2)
+        new_ax.axvline(x=seq_length, color='red', linestyle='-', alpha=1.0, linewidth=2)
         new_ax.text(seq_length, new_ax.get_ylim()[0] + 0.05 * (new_ax.get_ylim()[1] - new_ax.get_ylim()[0]), 
-                'Prediction Start', fontsize=12, color='red', rotation=90, 
+                'Prediction Start', fontsize=14, color='red', rotation=90,
                 verticalalignment='bottom', horizontalalignment='right',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
         
-        # Add shaded area for prediction region
-        new_ax.axvspan(seq_length, ax.get_xlim()[1], alpha=0.1, color='red')
+        # Add solid shaded area for prediction region
+        new_ax.axvspan(seq_length, ax.get_xlim()[1], alpha=0.2, color='red', edgecolor='none')
     
-    # Enhance legend
-    new_ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+    # Enhance legend with solid background
+    new_ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
+                 edgecolor='black')
+    
+    # Set figure with solid background
+    fig.patch.set_alpha(1.0)
     
     # Save the figure
     filename = f"{stock}_{period}_{current_date}_{feature_name}_{plot_type}.eps"
     filepath = os.path.join(output_dir, filename)
-    fig.savefig(filepath, format='eps', dpi=300, bbox_inches='tight')
+    fig.savefig(filepath, format='eps', dpi=300, bbox_inches='tight', transparent=False)
     plt.close(fig)
     
     return filepath
@@ -271,6 +280,8 @@ print(f"R² Score: {r2:.4f}")
 
 # Enhanced plotting for predicted output
 fig, axs = plt.subplots(features, 1, figsize=(15, 8 * features), constrained_layout=True)
+fig.patch.set_alpha(1.0)  # Solid background for the figure
+
 if features == 1:
     axs = [axs]  # Make it iterable for the single feature case
 
@@ -295,17 +306,18 @@ for i in range(features):
             label='Predicted (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
     
     # Add vertical line and annotation at prediction start
-    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=0.7, linewidth=2)
+    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=1.0, linewidth=2)
     ax.text(seq_length, ax.get_ylim()[0] + 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0]), 
-            'Prediction Start', fontsize=18, color='red', rotation=90, 
+            'Prediction Start', fontsize=14, color='red', rotation=90,
             verticalalignment='bottom', horizontalalignment='right',
-            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
     
-    # Add shaded area for prediction region
-    ax.axvspan(seq_length, len(predicted_output), alpha=0.1, color='red')
+    # Add solid shaded area for prediction region
+    ax.axvspan(seq_length, len(predicted_output), alpha=0.2, color='red', edgecolor='none')
     
-    # Enhance legend
-    ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+    # Enhance legend with solid background
+    ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
+             edgecolor='black')
     
     # Store prediction start point for EPS export
     ax.prediction_start = seq_length
@@ -318,17 +330,19 @@ for i in range(features):
 plt.suptitle(f'{arg_vals.stock} ({arg_vals.period}) - Model Predictions', 
              fontsize=22, fontweight='bold', y=1.02)
 
-# Add subtitle with more details
+# Add subtitle with more details - using solid background
 prediction_date = datetime.now().strftime("%B %d, %Y")
 plt.figtext(0.5, 0.01, f"Prediction generated on {prediction_date} | Training Time: {total_time:.2f} seconds", 
-            ha="center", fontsize=18, bbox={"facecolor":"#f0f0f0", "alpha":0.5, "pad":5})
+            ha="center", fontsize=14, bbox={"facecolor":"#f0f0f0", "alpha":1.0, "pad":5, "edgecolor":"black"})  # Increased from 12 to 14
 
 # Save the enhanced figure
 plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_predicted_future.png", 
-            dpi=300, bbox_inches='tight')
+            dpi=300, bbox_inches='tight', transparent=False)
 
 # Enhanced plotting for future data
 fig, axs = plt.subplots(features, 1, figsize=(15, 8 * features), constrained_layout=True)
+fig.patch.set_alpha(1.0)  # Solid background for the figure
+
 if features == 1:
     axs = [axs]  # Make it iterable for the single feature case
 
@@ -353,17 +367,18 @@ for i in range(features):
             label='Future Forecast (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
     
     # Add vertical line and annotation at prediction start
-    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=0.7, linewidth=2)
+    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=1.0, linewidth=2)
     ax.text(seq_length, ax.get_ylim()[0] + 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0]), 
-            'Prediction Start', fontsize=12, color='red', rotation=90, 
+            'Prediction Start', fontsize=14, color='red', rotation=90,
             verticalalignment='bottom', horizontalalignment='right',
-            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
     
-    # Add shaded area for prediction region
-#     ax.axvspan(seq_length, len(future_data), alpha=0.1, color='red')
+    # Add solid shaded area for prediction region
+    ax.axvspan(seq_length, len(future_data), alpha=0.2, color='red', edgecolor='none')
     
-    # Enhance legend
-    ax.legend(loc='best', frameon=True, framealpha=0.9, fancybox=True, shadow=True, fontsize=12)
+    # Enhance legend with solid background
+    ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
+             edgecolor='black')
     
     # Store prediction start point for EPS export
     ax.prediction_start = seq_length
@@ -376,13 +391,13 @@ for i in range(features):
 plt.suptitle(f'{arg_vals.stock} ({arg_vals.period}) - Future Forecast', 
              fontsize=22, fontweight='bold', y=1.02)
 
-# Add subtitle with more details
+# Add subtitle with more details - using solid background
 plt.figtext(0.5, 0.01, f"Forecast generated on {prediction_date} | Looking {prediction_steps} steps ahead", 
-            ha="center", fontsize=12, bbox={"facecolor":"#f0f0f0", "alpha":0.5, "pad":5})
+            ha="center", fontsize=14, bbox={"facecolor":"#f0f0f0", "alpha":1.0, "pad":5, "edgecolor":"black"})  # Increased from 12 to 14
 
 # Save the enhanced figure
 plt.savefig(f"../output/{arg_vals.stock}_{arg_vals.period}_{current_date}_future_data.png", 
-            dpi=300, bbox_inches='tight')
+            dpi=300, bbox_inches='tight', transparent=False)
 
 print(f"EPS files saved to: {os.path.join('..', 'output', 'eps_plots')}")
 
