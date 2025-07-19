@@ -14,18 +14,18 @@ import os
 # Set up improved visualization styles
 plt.style.use('ggplot')
 plt.rcParams['figure.figsize'] = (15, 12)
-plt.rcParams['font.size'] = 12
-plt.rcParams['axes.labelsize'] = 14
-plt.rcParams['axes.titlesize'] = 16
+plt.rcParams['font.size'] = 20
+plt.rcParams['axes.labelsize'] = 20
+plt.rcParams['axes.titlesize'] = 20
 plt.rcParams['xtick.labelsize'] = 20  # Increased from 14 to 20
 plt.rcParams['ytick.labelsize'] = 20  # Increased from 14 to 20
-plt.rcParams['legend.fontsize'] = 12
+plt.rcParams['legend.fontsize'] = 20
 plt.rcParams['figure.titlesize'] = 20
 plt.rcParams['savefig.transparent'] = False  # Ensure backgrounds are not transparent
 
 # Function to set up professional-looking plots
 def setup_plot_style(ax, title, xlabel, ylabel, feature_name):
-    ax.set_title(title, fontsize=16, fontweight='bold')
+    # ax.set_title(title, fontsize=16, fontweight='bold')
     ax.set_xlabel(xlabel, fontsize=14)
     ax.set_ylabel(ylabel, fontsize=14)
     ax.grid(True, linestyle='--', alpha=1.0)  # Solid grid lines
@@ -77,7 +77,7 @@ def save_feature_as_eps(ax, feature_name, stock, period, current_date, plot_type
                 bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
         
         # Add solid shaded area for prediction region
-        new_ax.axvspan(seq_length, ax.get_xlim()[1], alpha=0.2, color='red', edgecolor='none')
+        # new_ax.axvspan(seq_length, ax.get_xlim()[1], alpha=0.2, color='red', edgecolor='none')
     
     # Enhance legend with solid background
     new_ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
@@ -313,7 +313,7 @@ for i in range(features):
             bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
     
     # Add solid shaded area for prediction region
-    ax.axvspan(seq_length, len(predicted_output), alpha=0.2, color='red', edgecolor='none')
+    # ax.axvspan(seq_length, len(predicted_output), alpha=0.2, color='red', edgecolor='none')
     
     # Enhance legend with solid background
     ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
@@ -374,7 +374,7 @@ for i in range(features):
             bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
     
     # Add solid shaded area for prediction region
-    ax.axvspan(seq_length, len(future_data), alpha=0.2, color='red', edgecolor='none')
+    # ax.axvspan(seq_length, len(future_data), alpha=0.2, color='red', edgecolor='none')
     
     # Enhance legend with solid background
     ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
