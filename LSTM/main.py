@@ -133,6 +133,16 @@ def calculate_metrics(y_true, y_pred):
     
     return mse, rmse, mae, r2
 
+def setup_plot_style(ax, title, xlabel, ylabel, legend_label):
+    """Setup the plot style for each subplot"""
+    ax.set_title(title, fontsize=16, fontweight='bold')
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(ylabel, fontsize=14)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.legend(loc='best', fontsize=12)
+    return ax
+
 # Plot the predictions for training data
 model.eval()
 seq_length = arg_vals.seq_length
