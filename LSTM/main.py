@@ -67,17 +67,9 @@ def save_feature_as_eps(ax, feature_name, stock, period, current_date, plot_type
                     feature_name,
                     feature_name)
     
-    # Add vertical line and annotation at prediction start
-    if hasattr(ax, 'prediction_start'):
-        seq_length = ax.prediction_start
-        new_ax.axvline(x=seq_length, color='red', linestyle='-', alpha=1.0, linewidth=2)
-        new_ax.text(seq_length, new_ax.get_ylim()[0] + 0.05 * (new_ax.get_ylim()[1] - new_ax.get_ylim()[0]), 
-                'Prediction Start', fontsize=14, color='red', rotation=90,
-                verticalalignment='bottom', horizontalalignment='right',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
-        
-        # Add solid shaded area for prediction region
-        # new_ax.axvspan(seq_length, ax.get_xlim()[1], alpha=0.2, color='red', edgecolor='none')
+    # Match x-axis limits from original plot
+    if hasattr(ax, 'get_xlim'):
+        new_ax.set_xlim(ax.get_xlim())
     
     # Enhance legend with solid background
     new_ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
@@ -293,34 +285,24 @@ for i in range(features):
                           feature_name,
                           feature_name)
     
-    # Plot ground truth
-    ax.plot(np.arange(len(ground_truth)), ground_truth[:, i], 
-            label='Historical Data', color='#1f77b4', linewidth=2.5)
+    # Plot only the ground truth for the prediction period
+    ax.plot(np.arange(seq_length, len(ground_truth)), ground_truth[seq_length:, i], 
+            label='Ground Truth', color='#1f77b4', linewidth=2.5)
     
-    # Plot predictions
-    ax.plot(np.arange(len(predicted_output)), predicted_output[:, i], 
+    # Plot only the predicted values (not the input sequence)
+    ax.plot(np.arange(seq_length, len(predicted_output)), predicted_output[seq_length:, i], 
             label='Predicted', color='#ff7f0e', linewidth=2, linestyle='--')
     
-    # Plot smoothed predictions
-    ax.plot(np.arange(len(predicted_output_smooth)), predicted_output_smooth[:, i], 
+    # Plot only the smoothed predictions
+    ax.plot(np.arange(seq_length, len(predicted_output_smooth)), predicted_output_smooth[seq_length:, i], 
             label='Predicted (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
     
-    # Add vertical line and annotation at prediction start
-    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=1.0, linewidth=2)
-    ax.text(seq_length, ax.get_ylim()[0] + 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0]), 
-            'Prediction Start', fontsize=14, color='red', rotation=90,
-            verticalalignment='bottom', horizontalalignment='right',
-            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
-    
-    # Add solid shaded area for prediction region
-    # ax.axvspan(seq_length, len(predicted_output), alpha=0.2, color='red', edgecolor='none')
+    # Adjust x-axis to show only the prediction region
+    ax.set_xlim(seq_length-1, len(predicted_output))
     
     # Enhance legend with solid background
     ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
              edgecolor='black')
-    
-    # Store prediction start point for EPS export
-    ax.prediction_start = seq_length
     
     # Save individual feature as EPS
     save_feature_as_eps(ax, feature_name, arg_vals.stock, arg_vals.period, 
@@ -354,34 +336,20 @@ for i in range(features):
                          feature_name,
                          feature_name)
     
-    # Plot input data
-    ax.plot(np.arange(seq_length), future_data[:seq_length, i], 
-            label='Input Data', color='#1f77b4', linewidth=2.5)
-    
-    # Plot future predictions
+    # Plot only the future predictions
     ax.plot(np.arange(seq_length, len(future_data)), future_data[seq_length:, i], 
             label='Future Forecast', color='#ff7f0e', linewidth=2, linestyle='--')
     
-    # Plot smoothed future predictions
+    # Plot only the smoothed future predictions
     ax.plot(np.arange(seq_length, len(future_data_smooth)), future_data_smooth[seq_length:, i], 
             label='Future Forecast (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
     
-    # Add vertical line and annotation at prediction start
-    ax.axvline(x=seq_length, color='red', linestyle='-', alpha=1.0, linewidth=2)
-    ax.text(seq_length, ax.get_ylim()[0] + 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0]), 
-            'Prediction Start', fontsize=14, color='red', rotation=90,
-            verticalalignment='bottom', horizontalalignment='right',
-            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=1.0, edgecolor='black'))
-    
-    # Add solid shaded area for prediction region
-    # ax.axvspan(seq_length, len(future_data), alpha=0.2, color='red', edgecolor='none')
+    # Adjust x-axis to show only the prediction region
+    ax.set_xlim(seq_length-1, len(future_data))
     
     # Enhance legend with solid background
     ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
              edgecolor='black')
-    
-    # Store prediction start point for EPS export
-    ax.prediction_start = seq_length
     
     # Save individual feature as EPS
     save_feature_as_eps(ax, feature_name, arg_vals.stock, arg_vals.period, 
