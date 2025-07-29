@@ -39,6 +39,10 @@ def setup_plot_style(ax, title, xlabel, ylabel, feature_name):
     ax.tick_params(axis='both', which='major', labelsize=20)  # Increased from 14 to 20
     ax.tick_params(axis='both', which='minor', labelsize=16)  # Increased from 12 to 16
     
+    # Force integer ticks on x-axis
+    from matplotlib.ticker import MaxNLocator
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    
     # Return the axis for further customization
     return ax
 
@@ -63,13 +67,17 @@ def save_feature_as_eps(ax, feature_name, stock, period, current_date, plot_type
     # Copy styling
     setup_plot_style(new_ax, 
                     f'{feature_name} - {plot_type}', 
-                    'Time Steps', 
+                    'Days', 
                     feature_name,
                     feature_name)
     
     # Match x-axis limits from original plot
     if hasattr(ax, 'get_xlim'):
         new_ax.set_xlim(ax.get_xlim())
+    
+    # Force integer ticks on x-axis
+    from matplotlib.ticker import MaxNLocator
+    new_ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     
     # Enhance legend with solid background
     new_ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
@@ -281,24 +289,28 @@ for i in range(features):
     feature_name = data_proc.cont_data_frame.columns[i]
     ax = setup_plot_style(axs[i], 
                           f'{feature_name} - Forecast', 
-                          'Time Steps', 
+                          'Days', 
                           feature_name,
                           feature_name)
     
     # Plot only the ground truth for the prediction period
-    ax.plot(np.arange(seq_length, len(ground_truth)), ground_truth[seq_length:, i], 
+    ax.plot(np.arange(seq_length, len(ground_truth), dtype=int), ground_truth[seq_length:, i], 
             label='Ground Truth', color='#1f77b4', linewidth=2.5)
     
     # Plot only the predicted values (not the input sequence)
-    ax.plot(np.arange(seq_length, len(predicted_output)), predicted_output[seq_length:, i], 
+    ax.plot(np.arange(seq_length, len(predicted_output), dtype=int), predicted_output[seq_length:, i], 
             label='Predicted', color='#ff7f0e', linewidth=2, linestyle='--')
     
     # Plot only the smoothed predictions
-    ax.plot(np.arange(seq_length, len(predicted_output_smooth)), predicted_output_smooth[seq_length:, i], 
+    ax.plot(np.arange(seq_length, len(predicted_output_smooth), dtype=int), predicted_output_smooth[seq_length:, i], 
             label='Predicted (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
     
     # Adjust x-axis to show only the prediction region
     ax.set_xlim(seq_length-1, len(predicted_output))
+    
+    # Force integer ticks on x-axis
+    from matplotlib.ticker import MaxNLocator
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     
     # Enhance legend with solid background
     ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
@@ -332,20 +344,24 @@ for i in range(features):
     feature_name = data_proc.cont_data_frame.columns[i]
     ax = setup_plot_style(axs[i], 
                          f'{feature_name} - Future Forecast', 
-                         'Time Steps', 
+                         'Days', 
                          feature_name,
                          feature_name)
     
     # Plot only the future predictions
-    ax.plot(np.arange(seq_length, len(future_data)), future_data[seq_length:, i], 
+    ax.plot(np.arange(seq_length, len(future_data), dtype=int), future_data[seq_length:, i], 
             label='Future Forecast', color='#ff7f0e', linewidth=2, linestyle='--')
     
     # Plot only the smoothed future predictions
-    ax.plot(np.arange(seq_length, len(future_data_smooth)), future_data_smooth[seq_length:, i], 
+    ax.plot(np.arange(seq_length, len(future_data_smooth), dtype=int), future_data_smooth[seq_length:, i], 
             label='Future Forecast (Smoothed)', color='#2ca02c', linewidth=2.5, linestyle='-')
     
     # Adjust x-axis to show only the prediction region
     ax.set_xlim(seq_length-1, len(future_data))
+    
+    # Force integer ticks on x-axis
+    from matplotlib.ticker import MaxNLocator
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     
     # Enhance legend with solid background
     ax.legend(loc='best', frameon=True, framealpha=1.0, fancybox=True, shadow=True, fontsize=14,
